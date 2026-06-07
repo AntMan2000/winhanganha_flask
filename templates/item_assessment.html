@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_badge.html" import access_badge %}
+{% from "_helpers.html" import access_badge %}
 {% block title %}Item Assessment Portal | First Nations Winhanganha Archive{% endblock %}
 {% block hero_title %}Item Assessment Portal{% endblock %}
 {% block content %}
@@ -26,7 +26,7 @@
           <h3 class="h4 card-title">{{ assessment.title }}</h3>
           <p class="card-text">{{ assessment.description }}</p>
           <ul class="metadata-list">
-            <li><strong>Item ID:</strong> {{ assessment.item_code }}</li>
+            <li><strong>Item ID:</strong> {{ assessment.item_id }}</li>
             <li><strong>Collection:</strong> {{ assessment.collection_name }}</li>
             <li><strong>Item type:</strong> {{ assessment.item_type }}</li>
             <li><strong>Language group:</strong> {{ assessment.language_group }}</li>
@@ -54,36 +54,7 @@
   </div>
 </div>
 
-<div class="container padb">
-  <h2>Assessment Metadata</h2>
-  <p>Reviewers update this section to define cultural access conditions before the item is released or restricted.</p>
-  <form>
-    <div class="form-row">
-      <div class="form-group col-md-4">
-        <label for="accessDecision">Recommended access level</label>
-        <select class="form-control" id="accessDecision">
-          {% for option in ['Under Review', 'Public', 'Restricted', 'Private'] %}<option {% if option == assessment.recommended_access_level %}selected{% endif %}>{{ option }}</option>{% endfor %}
-        </select>
-      </div>
-      <div class="form-group col-md-4">
-        <label for="culturalSensitivity">Cultural sensitivity</label>
-        <select class="form-control" id="culturalSensitivity">
-          {% for option in ['High', 'Medium', 'Low', 'Not yet assessed'] %}<option {% if option == assessment.cultural_sensitivity %}selected{% endif %}>{{ option }}</option>{% endfor %}
-        </select>
-      </div>
-      <div class="form-group col-md-4">
-        <label for="approvalStatus">Approval status</label>
-        <select class="form-control" id="approvalStatus">
-          {% for option in ['Awaiting Elder review', 'Approved for public release', 'Approved with restrictions', 'Not approved for public release'] %}<option {% if option == assessment.approval_status %}selected{% endif %}>{{ option }}</option>{% endfor %}
-        </select>
-      </div>
-    </div>
-    <div class="form-group"><label for="culturalNotes">Cultural notes</label><textarea class="form-control" id="culturalNotes">{{ assessment.cultural_notes }}</textarea></div>
-    <div class="form-group"><label for="accessConditions">Access conditions</label><textarea class="form-control" id="accessConditions">{{ assessment.access_conditions }}</textarea></div>
-    <div class="form-group"><label for="publicDescription">Approved public description</label><textarea class="form-control" id="publicDescription">{{ assessment.public_description }}</textarea></div>
-    <button type="button" class="btn btn-dark mybutton">Save assessment metadata</button>
-  </form>
-</div>
+{% include "metadata_form.html" %}
 
 <hr class="my-5">
 
@@ -100,7 +71,7 @@
       {% endfor %}
       <form>
         <div class="form-group"><label for="newDiscussionNote">Add discussion note</label><textarea class="form-control" id="newDiscussionNote" placeholder="Enter review note..."></textarea></div>
-        <button type="button" class="btn btn-dark mybutton">Add note</button>
+        <button type="button" class="btn btn-dark mybutton addDiscussionNote">Add note</button>
       </form>
     </div>
 

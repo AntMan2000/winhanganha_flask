@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_badge.html" import access_badge %}
+{% from "_helpers.html" import access_badge %}
 {% block title %}First Nations Winhanganha Archive{% endblock %}
 {% block hero_actions %}
   <a href="{{ url_for('items') }}" class="btn btn-outline-light btn-lg mt-4">Browse Archive</a>
@@ -81,8 +81,9 @@
     </div>
   </form>
 </div>
+<span class="anchor padtb" id="cultural-protocols">&nbsp;</span>
 
-<div class="container padb" id="cultural-protocols">
+<div class="container padb">
   <h2>Cultural Protocols</h2>
   <p>This archive contains culturally significant material. Some records may require restricted access, Elder approval or community consultation before viewing or reuse.</p>
   <p>Items are reviewed by authorised library staff and community representatives before publication. Assessment considers cultural sensitivity, community permissions, access restrictions and appropriate metadata.</p>

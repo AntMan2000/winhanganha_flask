@@ -4,9 +4,11 @@ from pathlib import Path
 
 import pymysql
 from dotenv import load_dotenv
-#from flask_login import LoginManager
+from werkzeug.security import generate_password_hash, check_password_hash
+from classes.forms import RegistrationForm, MetadataForm
+from classes.user import User
 from flask_bootstrap import Bootstrap4
-from flask import Flask, abort, g, redirect, render_template, request, url_for
+from flask import Flask, abort, g, redirect, render_template, request, url_for, flash
 import werkzeug
 
 
@@ -15,9 +17,8 @@ load_dotenv(BASE_DIR / ".env")
 
 
 app = Flask(__name__.split('.')[0])
-
-
-
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
+bootstrap = Bootstrap4(app)
 
 def get_db():
     if "db" not in g:
@@ -74,7 +75,6 @@ def fetch_item(item_id: str):
     return row(
         """
         SELECT ci.itemID AS item_id,
-               ci.itemID AS item_code,
                ci.title,
                ci.description,
                ci.itemType AS item_type,
@@ -90,10 +90,9 @@ def fetch_item(item_id: str):
                cm.ownership,
                cm.accessLevel AS access_level,
                cm.culturalSensitivity AS cultural_sensitivity,
-               cm.handlingNotes AS cultural_notes,
-               cm.handlingNotes AS access_conditions,
-               cm.communityApprovalStatus AS community_approval,
-               cm.communityApprovalStatus AS review_status
+               cm.culturalNotes AS cultural_notes,
+               cm.accessConditions AS access_conditions,
+               cm.communityApprovalStatus AS community_approval
         FROM CollectionItem ci
         JOIN Collection c ON c.collectionID = ci.collectionID
         JOIN CulturalMetadata cm ON cm.itemID = ci.itemID
@@ -111,6 +110,42 @@ def next_id(table_name: str, id_column: str, prefix: str, width: int = 3) -> str
     max_num = current["max_num"] or 0
     return f"{prefix}{max_num + 1:0{width}d}"
 
+
+def create_user(name, email, password):
+    password_hash = generate_password_hash(password)
+    nextid = next_id("Users", "userID", "U")
+    execute(
+        """
+        INSERT INTO Users
+        (userID, name, email, passwordHash)
+        VALUES (%s, %s, %s, %s)
+        """,
+        (nextid, name, email, password_hash)
+    )
+
+def get_user_by_username(username):
+    return row(
+        """
+        SELECT userID, username, email, passwordHash
+        FROM Users
+        WHERE username = %s
+        """,
+        (username,)
+    )
+
+
+def verify_user_password(username, password):
+    user = get_user_by_username(username)
+
+    if user is None:
+        return None
+
+    if check_password_hash(user["passwordHash"], password):
+        return user
+
+    return None
+
+## APP Routes
 
 @app.errorhandler(404)
 def page_not_found(e):
@@ -156,7 +191,6 @@ def items():
 
     sql = """
         SELECT ci.itemID AS item_id,
-               ci.itemID AS item_code,
                ci.title,
                ci.description,
                ci.itemType AS item_type,
@@ -224,7 +258,7 @@ def item_detail(item_id: str = "I001"):
     requirements = rows(
         """
         SELECT metadataID AS requirement_id,
-               handlingNotes AS requirement_text
+               culturalNotes AS requirement_text
         FROM CulturalMetadata
         WHERE itemID = %s
         """,
@@ -275,7 +309,6 @@ def assessment():
                ar.notes AS decision_reason,
                ar.notes AS pending_action,
                ci.itemID AS item_id,
-               ci.itemID AS item_code,
                ci.title,
                ci.description,
                ci.itemType AS item_type,
@@ -286,19 +319,19 @@ def assessment():
                REPLACE(ci.imagePath, 'img/', '') AS image_filename,
                c.collectionName AS collection_name,
                cm.accessLevel AS access_level,
-               cm.accessLevel AS recommended_access_level,
+               cm.recommendedAccessLevel AS recommended_access_level,
                cm.culturalSensitivity AS cultural_sensitivity,
-               cm.communityApprovalStatus AS approval_status,
                cm.communityApprovalStatus AS review_status,
-               cm.handlingNotes AS cultural_notes,
-               cm.handlingNotes AS access_conditions,
+               cm.culturalNotes AS cultural_notes,
+               cm.accessConditions AS access_conditions,
                ci.description AS public_description,
-               r.name AS assigned_reviewers
+               u.name AS assigned_reviewers
         FROM AssessmentRecord ar
         JOIN CollectionItem ci ON ci.itemID = ar.itemID
         JOIN Collection c ON c.collectionID = ci.collectionID
         JOIN CulturalMetadata cm ON cm.itemID = ci.itemID
         JOIN Reviewer r ON r.reviewerID = ar.reviewerID
+        JOIN Users u ON u.userID = r.userID
         WHERE ar.itemID = 'I004'
         ORDER BY ar.assessmentID
         LIMIT 1
@@ -310,11 +343,12 @@ def assessment():
     notes = rows(
         """
         SELECT ac.commentID AS note_id,
-               r.name AS reviewer_name,
+               u.name AS reviewer_name,
                DATE_FORMAT(ac.commentDate, '%%d %%M %%Y') AS note_date,
                ac.commentText AS note_text
         FROM AssessmentComment ac
         JOIN Reviewer r ON r.reviewerID = ac.reviewerID
+        JOIN Users u ON u.userID = r.userID
         WHERE ac.assessmentID = %s
         ORDER BY ac.commentDate, ac.commentID
         """,
@@ -322,6 +356,29 @@ def assessment():
     )
     return render_template("item_assessment.html", assessment=assessment_row, notes=notes)
 
+@app.route("/item-assessment", methods=["POST"])
+#secret
+def update_assessment_metadata():
+    form = MetadataForm(request.form)
+    if request.method == 'POST' and form.validate():
+        # Process the form data and update the assessment metadata
+        return redirect('/item-assessment')
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    form = RegistrationForm(request.form)
+
+    if request.method == 'POST' and form.validate():
+        create_user(
+            form.name.data,
+            form.email.data,
+            form.password.data
+        )
+
+        flash('Thanks for registering')
+        return redirect(url_for('register'))
+
+    return render_template('register.html', form=form)
 
 if __name__ == "__main__":
     host = os.environ.get('FLASK_HOST')

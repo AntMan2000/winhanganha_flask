@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_badge.html" import access_badge %}
+{% from "_helpers.html" import access_badge %}
 {% block title %}{{ item.title }} | First Nations Winhanganha Archive{% endblock %}
 {% block hero_title %}View Archive Item{% endblock %}
 {% block content %}
@@ -31,7 +31,7 @@
       <div class="restricted-panel">
         <h3 class="h5">Item Metadata</h3>
         <ul class="metadata-list">
-          <li><strong>Item ID:</strong> {{ item.item_code }}</li>
+          <li><strong>Item ID:</strong> {{ item.item_id }}</li>
           <li><strong>Collection:</strong> {{ item.collection_name }}</li>
           <li><strong>Item type:</strong> {{ item.item_type }}</li>
           {% if item.language_group %}<li><strong>Language group:</strong> {{ item.language_group }}</li>{% endif %}
