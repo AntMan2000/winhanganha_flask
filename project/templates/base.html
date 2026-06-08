@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}First Nations Winhanganha Archive{% endblock %}</title>
+  <meta name="description" content="A curated digital archive preserving First Nations knowledge, language, story and history.">
+
+  {{ bootstrap.load_css() }}
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body id="top">
+
+<nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="{{ url_for('home') }}">
+      First Nations Winhanganha Archive
+    </a>
+
+    <button 
+      class="navbar-toggler" 
+      type="button" 
+      data-bs-toggle="collapse" 
+      data-bs-target="#navbarSupportedContent" 
+      aria-controls="navbarSupportedContent" 
+      aria-expanded="false" 
+      aria-label="Toggle navigation"
+    >
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ms-auto">
+        <li class="nav-item">
+          <a class="nav-link {% if request.endpoint == 'home' %}active{% endif %}" href="{{ url_for('home') }}">
+            Home
+          </a>
+        </li>
+
+        <li class="nav-item">
+          <a class="nav-link {% if request.endpoint == 'items' %}active{% endif %}" href="{{ url_for('items') }}">
+            Archive
+          </a>
+        </li>
+
+        <li class="nav-item">
+          <a class="nav-link" href="#">About</a>
+        </li>
+
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('home') }}#cultural-protocols">
+            Cultural Protocols
+          </a>
+        </li>
+
+        <li class="nav-item">
+          <a class="nav-link" href="#">Contact</a>
+        </li>
+
+        <li class="nav-item">
+          <a class="nav-link {% if request.endpoint == 'assessment' %}active{% endif %}" href="{{ url_for('assessment') }}">
+            Assessment Portal
+          </a>
+        </li>
+
+        {% if current_user.is_authenticated %}
+          <li class="nav-item">
+            <a class="nav-link {% if request.endpoint == 'account' %}active{% endif %}" href="{{ url_for('account') }}">
+              Account
+            </a>
+          </li>
+
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('logout') }}">
+              Logout
+            </a>
+          </li>
+        {% else %}
+          <li class="nav-item">
+            <a class="nav-link {% if request.endpoint == 'login' %}active{% endif %}" href="{{ url_for('login') }}">
+              Login
+            </a>
+          </li>
+
+          <li class="nav-item">
+            <a class="nav-link {% if request.endpoint == 'register' %}active{% endif %}" href="{{ url_for('register') }}">
+              Register
+            </a>
+          </li>
+        {% endif %}
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<div class="custom-jumbotron jumbotron-fluid">
+  <div class="container hero-content text-center">
+    <h1 class="display-3 text-white">
+      {% block hero_title %}First Nations Winhanganha Archive{% endblock %}
+    </h1>
+
+    <p class="text-light lead">
+      Preserving and sharing First Nations knowledge, language, history and cultural heritage.
+    </p>
+
+    <div class="blockquote-footer text-light">
+      Aboriginal and Torres Strait Islander people should be aware that this website may contain images, voices and names of deceased persons.
+    </div>
+
+    {% block hero_actions %}{% endblock %}
+  </div>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="container mt-3">
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }} show flashes" role="alert">
+          {{ message }}          
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+{% block content %}{% endblock %}
+
+<hr class="featurette-divider">
+
+<footer class="container padb">
+  <div class="padb">
+    First Nations Winhanganha Archive acknowledges the Traditional Owners of Country throughout Australia and acknowledges their continuing connection to land, waters and community. We pay our respects to the people, the cultures and the Elders past and present.
+  </div>
+
+  <div class="padb">
+    Materials in this archive remain connected to the communities, families and knowledge holders from which they come. Users must follow cultural use conditions and must not reproduce, download or share restricted materials without permission.
+  </div>
+
+  <p class="float-end">
+    <a href="#top">Back to top</a>
+  </p>
+
+  <p>
+    © 2026 First Nations Winhanganha Archive ·
+    <a href="#">Privacy</a> ·
+    <a href="#">Terms</a> ·
+    <a href="{{ url_for('home') }}#cultural-protocols">Cultural Protocols</a> ·
+    <a href="#">Contact</a>
+  </p>
+</footer>
+
+<div class="modal fade" id="reviewerLoginModal" tabindex="-1" aria-labelledby="reviewerLoginModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h2 class="modal-title h4" id="reviewerLoginModalLabel">
+          Reviewer Login
+        </h2>
+
+        <button 
+          type="button" 
+          class="btn-close" 
+          data-bs-dismiss="modal" 
+          aria-label="Close reviewer login modal"
+        ></button>
+      </div>
+
+      <div class="modal-body">
+        <p>
+          Placeholder login area for Elders and authorised reviewers. The assessment content represents what approved users would see after login.
+        </p>
+
+        <form>
+          <div class="mb-3">
+            <label for="reviewerEmail" class="form-label">Email address</label>
+            <input 
+              type="email" 
+              class="form-control" 
+              id="reviewerEmail" 
+              placeholder="elder.reviewer@example.org"
+            >
+          </div>
+
+          <div class="mb-3">
+            <label for="reviewerPassword" class="form-label">Password</label>
+            <input 
+              type="password" 
+              class="form-control" 
+              id="reviewerPassword" 
+              placeholder="Password"
+            >
+          </div>
+
+          <div class="mb-3">
+            <label for="reviewerRole" class="form-label">Reviewer role</label>
+            <select class="form-select" id="reviewerRole">
+              <option>Elder reviewer</option>
+              <option>Community representative</option>
+              <option>Library archivist</option>
+              <option>Collection manager</option>
+            </select>
+          </div>
+
+          <button type="button" class="btn btn-dark mybutton">
+            Login
+          </button>
+        </form>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+{{ bootstrap.load_js() }}
+
+<script>
+setTimeout(function () {
+  document.querySelectorAll('.flashes').forEach(function (alertBox) {
+    alertBox.style.transition = 'opacity 0.5s ease';
+    alertBox.style.opacity = '0';
+
+    setTimeout(function () {
+      alertBox.style.display = 'none';
+    }, 500);
+  });
+}, 3000);
+</script>
+
+
+</body>
+</html>

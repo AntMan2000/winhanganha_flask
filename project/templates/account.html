@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% from "_helpers.html" import render_field %}
+
+{% block title %}Account | First Nations Winhanganha Archive{% endblock %}
+{% block hero_title %}Welcome {{ session.name }}{% endblock %}
+
+{% block content %}
+<div class="container padtb">
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <h2>Your Account</h2>
+      <p>Welcome to your account, {{ session.name }}.</p>
+      <p>Here you can view your account details and manage your access requests.</p>
+
+      <div class="card mb-4">
+        <div class="card-header">
+          <h3 class="h5 mb-0">Account Details</h3>
+        </div>
+
+        <div class="card-body">
+          <ul class="list-group list-group-flush">
+            <li class="list-group-item">
+              <strong>Name:</strong> {{ session.name }}
+            </li>
+
+            <li class="list-group-item">
+              <strong>Email:</strong> {{ session.email }}
+            </li>
+
+            <li class="list-group-item">
+              <strong>Role:</strong> {{ session.role | default('Registered user') }}
+            </li>
+
+            <li class="list-group-item">
+              <strong>Authorisation Status:</strong> {{ session.authorisationStatus | default('Pending review') }}
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card mb-4">
+        <div class="card-header">
+          <h3 class="h5 mb-0">Access Requests</h3>
+        </div>
+
+        <div class="card-body">
+          <p class="mb-0">You have not made any access requests yet.</p>
+        </div>
+      </div>
+
+      <a href="{{ url_for('items') }}" class="btn btn-dark mybutton me-2">
+        Browse Archive
+      </a>
+
+      <a href="{{ url_for('logout') }}" class="btn btn-outline-dark mybutton">
+        Logout
+      </a>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="alert alert-secondary">
+        <strong>Account note:</strong>
+        Restricted item access may require review by authorised staff or community representatives.
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

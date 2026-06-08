@@ -1,0 +1,52 @@
+{% macro access_badge(access_level) -%}
+  {% if access_level == 'Public' %}
+    <span class="badge bg-success">Public</span>
+  {% elif access_level == 'Restricted' %}
+    <span class="badge bg-danger">Restricted</span>
+  {% elif access_level == 'Under Review' %}
+    <span class="badge bg-warning text-dark">Under Review</span>
+  {% elif access_level == 'Private' %}
+    <span class="badge bg-secondary">Private</span>
+  {% else %}
+    <span class="badge bg-secondary">{{ access_level }}</span>
+  {% endif %}
+{%- endmacro %}
+
+<!-- #https://github.com/hack4impact/flask-base/blob/master/app/templates/partials/_flashes.html
+{% macro render_flashes(class) %}
+    {% with msgs = get_flashed_messages(category_filter=[class]) %}
+        {% for msg in msgs %}
+            <div class="ui {{ class }} message" data-autohide="2">
+                <i class="close icon"></i>
+                {{ msg }}
+            </div>
+        {% endfor %}
+    {% endwith %}
+{% endmacro %}
+
+<div class="ui text container">
+    <div class="flashes">
+        {{ render_flashes('error') }}
+        {{ render_flashes('warning') }}
+        {{ render_flashes('info') }}
+        {{ render_flashes('success') }}
+    </div>
+</div> -->
+
+{% macro render_field(field) %}
+  {{ field.label(class="form-label") }}
+
+  {% if field.type == "BooleanField" %}
+    {{ field(class="form-check-input") }}
+  {% else %}
+    {{ field(class="form-control") }}
+  {% endif %}
+
+  {% if field.errors %}
+    <div class="text-danger small mt-1">
+      {% for error in field.errors %}
+        <div>{{ error }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endmacro %}

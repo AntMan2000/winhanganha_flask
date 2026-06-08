@@ -1,29 +1,47 @@
 {% extends "base.html" %}
 {% from "_helpers.html" import render_field %}
+
 {% block title %}Registration Form | First Nations Winhanganha Archive{% endblock %}
 {% block hero_title %}Register for Access{% endblock %}
+
 {% block content %}
 <div class="container padb">
-  <div class="row">
-    <div class="col-lg-12">
+  <div class="row g-4">
+    <div class="col-lg-7">
       <h2>Register for Access</h2>
       <p>To request access to restricted items in the archive, please create an account. Your request will be reviewed by our team and you will be notified of the outcome via email.</p>
-<form method=post>
-  <dl>
-    {{ render_field(form.name) }}
-    {{ render_field(form.email) }}
-    {{ render_field(form.password) }}
-    {{ render_field(form.confirm) }}
-    {{ render_field(form.accept_tos) }}
-  </dl>
-  <p><input type=submit class="btn btn-dark mybutton" value=Register>
-</form>
+
+      <form method="post">
+        <div class="mb-3">
+          {{ render_field(form.name) }}
+        </div>
+
+        <div class="mb-3">
+          {{ render_field(form.email) }}
+        </div>
+
+        <div class="mb-3">
+          {{ render_field(form.password) }}
+        </div>
+
+        <div class="mb-3">
+          {{ render_field(form.confirm) }}
+        </div>
+
+        <div class="form-check mb-3">
+          {{ render_field(form.accept_tos) }}
+        </div>
+
+        <button type="submit" class="btn btn-dark mybutton">
+          Register
+        </button>
+      </form>
     </div>
-    </div>
-    <div class="row">
+
     <div class="col-lg-5">
       <h2>Why register?</h2>
       <p>Some items in our archive are restricted due to cultural sensitivity. By registering for an account, you can request access to these items and contribute to the preservation and sharing of our cultural heritage.</p>
     </div>
   </div>
+</div>
 {% endblock %}

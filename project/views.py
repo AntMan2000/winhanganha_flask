@@ -1,164 +1,32 @@
-import os
 from datetime import date
-from pathlib import Path
 
-import pymysql
-from dotenv import load_dotenv
-from werkzeug.security import generate_password_hash, check_password_hash
-from classes.forms import RegistrationForm, MetadataForm
-from classes.user import User
-from flask_bootstrap import Bootstrap4
-from flask import Flask, abort, g, redirect, render_template, request, url_for, flash
-import werkzeug
+from flask import abort, flash, redirect, render_template, request, session, url_for
+from flask_login import login_required, login_user, logout_user
 
+from project import app
+from project.forms import LoginForm, MetadataForm, RegistrationForm
+from project.models import (
+    User,
+    create_user,
+    execute,
+    fetch_collections,
+    fetch_item,
+    get_user_reviewer,
+    next_id,
+    row,
+    rows,
+    verify_user_password,
+)
 
-BASE_DIR = Path(__file__).resolve().parent
-load_dotenv(BASE_DIR / ".env")
-
-
-app = Flask(__name__.split('.')[0])
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
-bootstrap = Bootstrap4(app)
-
-## Database Access
-
-def get_db():
-    if "db" not in g:
-        g.db = pymysql.connect(
-            host=os.getenv("MYSQL_HOST"),
-            port=int(os.getenv("MYSQL_PORT")),
-            user=os.getenv("MYSQL_USER"),
-            password=os.getenv("MYSQL_PASSWORD"),
-            database=os.getenv("MYSQL_DATABASE"),
-            charset="utf8mb4",
-            cursorclass=pymysql.cursors.DictCursor
-        )
-    return g.db
-
-
-@app.teardown_appcontext
-def close_db(error=None):
-    conn = g.pop("db", None)
-    if conn is not None:
-        conn.close()
-
-
-def rows(sql, params=None):
-    with get_db().cursor() as cur:
-        cur.execute(sql, params or ())
-        return cur.fetchall()
-
-
-def row(sql, params=None):
-    with get_db().cursor() as cur:
-        cur.execute(sql, params or ())
-        return cur.fetchone()
-
-
-def execute(sql, params=None):
-    with get_db().cursor() as cur:
-        cur.execute(sql, params or ())
-    get_db().commit()
-
-
-def fetch_collections():
-    return rows(
-        """
-        SELECT collectionID AS collection_id,
-               collectionName AS name,
-               description
-        FROM Collection
-        ORDER BY collectionName
-        """
-    )
-
-
-def fetch_item(item_id: str):
-    return row(
-        """
-        SELECT ci.itemID AS item_id,
-               ci.title,
-               ci.description,
-               ci.itemType AS item_type,
-               ci.place,
-               ci.languageGroup AS language_group,
-               ci.status,
-               ci.format,
-               DATE_FORMAT(ci.dateAdded, '%%d %%M %%Y') AS date_added,
-               ci.dateRecorded AS date_recorded,
-               REPLACE(ci.imagePath, 'img/', '') AS image_filename,
-               c.collectionName AS collection_name,
-               c.description AS collection_description,
-               cm.ownership,
-               cm.accessLevel AS access_level,
-               cm.culturalSensitivity AS cultural_sensitivity,
-               cm.culturalNotes AS cultural_notes,
-               cm.accessConditions AS access_conditions,
-               cm.communityApprovalStatus AS community_approval
-        FROM CollectionItem ci
-        JOIN Collection c ON c.collectionID = ci.collectionID
-        JOIN CulturalMetadata cm ON cm.itemID = ci.itemID
-        WHERE ci.itemID = %s
-        """,
-        (item_id,),
-    )
-
-
-def next_id(table_name: str, id_column: str, prefix: str, width: int = 3) -> str:
-    current = row(
-        f"SELECT MAX(CAST(SUBSTRING({id_column}, %s) AS UNSIGNED)) AS max_num FROM {table_name}",
-        (len(prefix) + 1,),
-    )
-    max_num = current["max_num"] or 0
-    return f"{prefix}{max_num + 1:0{width}d}"
-
-
-def create_user(name, email, password):
-    password_hash = generate_password_hash(password)
-    nextid = next_id("Users", "userID", "U")
-    execute(
-        """
-        INSERT INTO Users
-        (userID, name, email, passwordHash)
-        VALUES (%s, %s, %s, %s)
-        """,
-        (nextid, name, email, password_hash)
-    )
-
-def get_user_by_username(username):
-    return row(
-        """
-        SELECT userID, username, email, passwordHash
-        FROM Users
-        WHERE username = %s
-        """,
-        (username,)
-    )
-
-
-def verify_user_password(username, password):
-    user = get_user_by_username(username)
-
-    if user is None:
-        return None
-
-    if check_password_hash(user["passwordHash"], password):
-        return user
-
-    return None
-
-
-
-
-## APP Routes
 
 @app.errorhandler(404)
 def page_not_found(e):
-     return render_template("404.html"), 404
+    return render_template("404.html"), 404
+
 
 @app.errorhandler(500)
 def internal_error(e):
-     return render_template("500.html"), 500
+    return render_template("500.html"), 500
 
 
 @app.route("/")
@@ -177,12 +45,17 @@ def home():
         FROM CollectionItem ci
         JOIN Collection c ON c.collectionID = ci.collectionID
         JOIN CulturalMetadata cm ON cm.itemID = ci.itemID
-        WHERE cm.accessLevel = 'Public' AND cm.communityApprovalStatus = 'Approved' 
+        WHERE cm.accessLevel = 'Public'
+          AND cm.communityApprovalStatus = 'Approved'
         ORDER BY ci.itemID
         LIMIT 3
         """
     )
-    return render_template("index.html", collections=fetch_collections(), featured_items=featured_items)
+    return render_template(
+        "index.html",
+        collections=fetch_collections(),
+        featured_items=featured_items,
+    )
 
 
 @app.route("/items")
@@ -210,11 +83,20 @@ def items():
         FROM CollectionItem ci
         JOIN Collection c ON c.collectionID = ci.collectionID
         JOIN CulturalMetadata cm ON cm.itemID = ci.itemID
+        WHERE 1 = 1
     """
     params = []
 
     if search:
-        sql += " AND (ci.title LIKE %s OR ci.description LIKE %s OR ci.languageGroup LIKE %s OR ci.place LIKE %s OR c.collectionName LIKE %s)"
+        sql += """
+            AND (
+                ci.title LIKE %s
+                OR ci.description LIKE %s
+                OR ci.languageGroup LIKE %s
+                OR ci.place LIKE %s
+                OR c.collectionName LIKE %s
+            )
+        """
         term = f"%{search}%"
         params.extend([term, term, term, term, term])
     if collection:
@@ -260,6 +142,7 @@ def item_detail(item_id: str = "I001"):
     item = fetch_item(item_id)
     if item is None:
         abort(404)
+
     requirements = rows(
         """
         SELECT metadataID AS requirement_id,
@@ -301,7 +184,6 @@ def request_access(item_id: str):
     return redirect(url_for("item_detail", item_id=item_id, requested="1"))
 
 
-#needs to be expanded to show all assessment items and details, currently only shows one item for testing purposes
 @app.route("/item-assessment")
 @app.route("/item-assessment.html")
 def assessment():
@@ -361,35 +243,71 @@ def assessment():
     )
     return render_template("item_assessment.html", assessment=assessment_row, notes=notes)
 
+
 @app.route("/item-assessment", methods=["POST"])
-#secret
 def update_assessment_metadata():
     form = MetadataForm(request.form)
-    if request.method == 'POST' and form.validate():
-        # Process the form data and update the assessment metadata
-        return redirect('/item-assessment')
+    if form.validate():
+        flash("Assessment metadata saved.", "success")
+    else:
+        flash("Assessment metadata could not be saved.", "danger")
+    return redirect(url_for("assessment"))
 
-@app.route('/register', methods=['GET', 'POST'])
+
+@app.route("/register", methods=["GET", "POST"])
 def register():
     form = RegistrationForm(request.form)
 
-    if request.method == 'POST' and form.validate():
-        create_user(
-            form.name.data,
-            form.email.data,
-            form.password.data
-        )
+    if request.method == "POST" and form.validate():
+        create_user(form.name.data, form.email.data, form.password.data)
+        flash("Thanks for registering. You can now log in.", "success")
+        return redirect(url_for("login"))
 
-        flash('Thanks for registering')
-        return redirect(url_for('register'))
+    return render_template("register.html", form=form)
 
-    return render_template('register.html', form=form)
 
-## APP Execution
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    form = LoginForm(request.form)
 
-if __name__ == "__main__":
-    host = os.environ.get('FLASK_HOST')
-    port = int(os.environ.get('FLASK_PORT'))
-    debug_val = os.getenv("FLASK_DEBUG")
-    is_debug = debug_val.lower() == "true" if debug_val else False
-    app.run(host=host, port=port, debug=is_debug, load_dotenv=True)
+    if request.method == "POST" and form.validate():
+        email = form.email.data
+        password = form.password.data
+        user_row = verify_user_password(email, password)
+
+        if user_row:
+            user = User(user_row["userID"], user_row["name"], user_row["email"])
+            login_user(user)
+
+            session["userID"] = user_row["userID"]
+            session["name"] = user_row["name"]
+            session["email"] = user_row["email"]
+
+            reviewer_info = get_user_reviewer(user_row["userID"])
+            if reviewer_info:
+                session["authorisationStatus"] = reviewer_info["authorisationStatus"]
+                session["role"] = reviewer_info["role"]
+                session["reviewerID"] = reviewer_info["reviewerID"]
+
+            flash("Logged in successfully", "success")
+            return redirect(url_for("account"))
+
+        flash("Invalid email or password.", "danger")
+        return redirect(url_for("login"))
+
+    return render_template("login.html", form=form)
+
+
+@app.route("/account", methods=["GET", "POST"])
+@login_required
+def account():
+    return render_template("account.html")
+
+
+@app.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    session.clear()
+    flash("You have been logged out.", "success")
+    return redirect(url_for("home"))

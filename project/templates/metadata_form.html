@@ -1,0 +1,60 @@
+<div class="container padb">
+  <h2>Assessment Metadata</h2>
+  <p>Reviewers update this section to define cultural access conditions before the item is released or restricted.</p>
+
+  <form action="" method="POST">
+    <div class="row g-3">
+      <div class="col-md-4">
+        <label for="accessDecision" class="form-label">Recommended access level</label>
+        <select class="form-select" id="accessDecision" name="recommended_access_level">
+          {% for option in ['', 'Under Review', 'Public', 'Restricted', 'Private'] %}
+            <option value="{{ option }}" {% if option == assessment.recommended_access_level %}selected{% endif %}>
+              {{ option }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-4">
+        <label for="culturalSensitivity" class="form-label">Cultural sensitivity</label>
+        <select class="form-select" id="culturalSensitivity" name="cultural_sensitivity">
+          {% for option in ['', 'High', 'Medium', 'Low', 'Not yet assessed'] %}
+            <option value="{{ option }}" {% if option == assessment.cultural_sensitivity %}selected{% endif %}>
+              {{ option }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-4">
+        <label for="approvalStatus" class="form-label">Approval status</label>
+        <select class="form-select" id="approvalStatus" name="approval_status">
+          {% for option in ['', 'Awaiting Elder review', 'Approved for public release', 'Approved with restrictions', 'Not approved for public release'] %}
+            <option value="{{ option }}" {% if option == assessment.approval_status %}selected{% endif %}>
+              {{ option }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="mb-3 mt-3">
+      <label for="culturalNotes" class="form-label">Cultural notes</label>
+      <textarea class="form-control" id="culturalNotes" name="cultural_notes">{{ assessment.cultural_notes }}</textarea>
+    </div>
+
+    <div class="mb-3">
+      <label for="accessConditions" class="form-label">Access conditions</label>
+      <textarea class="form-control" id="accessConditions" name="access_conditions">{{ assessment.access_conditions }}</textarea>
+    </div>
+
+    <div class="mb-3">
+      <label for="publicDescription" class="form-label">Approved public description</label>
+      <textarea class="form-control" id="publicDescription" name="public_description">{{ assessment.public_description }}</textarea>
+    </div>
+
+    <button type="submit" class="btn btn-dark mybutton saveMetadata">
+      Save assessment metadata
+    </button>
+  </form>
+</div>
