@@ -11,6 +11,8 @@ class User(UserMixin):
         self.name = name
         self.email = email
 
+    # def get_id(self):
+    #     return str(self.id)
 
 def rows(sql, params=None):
     cur = mysql.connection.cursor()
@@ -90,6 +92,49 @@ def fetch_item(item_id: str):
         (item_id,),
     )
 
+def fetch_user_requests(user_id):
+    return rows(
+        """
+        SELECT 
+            ar.requestID,
+            ar.itemID,
+            ar.requestDate,
+            ar.requestStatus,
+            ar.purpose,
+            ci.title,
+            ci.format,
+            ci.status
+
+        FROM accessrequest ar
+        JOIN collectionitem ci ON ar.itemID = ci.itemID
+        WHERE
+            userID = %s
+        ORDER BY requestDate
+        """,
+        (user_id,),
+    )
+def fetch_user_request(user_id, item_id):
+    return row(
+        """
+        SELECT 
+            ar.requestID,
+            ar.itemID,
+            ar.requestDate,
+            ar.requestStatus,
+            ar.purpose,
+            ci.title,
+            ci.format,
+            ci.status
+
+        FROM accessrequest ar
+        JOIN collectionitem ci ON ar.itemID = ci.itemID
+        WHERE
+            ar.userID = %s
+            AND ar.itemID = %s
+        ORDER BY requestDate
+        """,
+        (user_id,item_id,),
+    )
 
 def create_user(name, email, password):
     password_hash = generate_password_hash(password)

@@ -30,20 +30,20 @@ class LoginForm(Form):
     password = PasswordField("Password", [DataRequired()])
 
 class AccessRequestForm(Form):
-    name = StringField("Full Name", [DataRequired()])
-    email = StringField("Email Address", [DataRequired(), Email()])
     purpose = SelectField(
-        'Purpose of request', 
+        "Purpose of request",
         [DataRequired()],
         choices=[
-            ('', ''), 
-            ('Research', 'Research'), 
-            ('Teaching or learning', 'Teaching or learning'), 
-            ('Community or family history', 'Community or family history'), 
-            ('Library consultation', 'Library consultation'), 
-            ('Other', 'Other')
-        ]        
+            ("", "Select a purpose"),
+            ("Lore","Lore"),
+            ("Research", "Research"),
+            ("Teaching or learning", "Teaching or learning"),
+            ("Community or family history", "Community or family history"),
+            ("Library consultation", "Library consultation"),
+            ("Other", "Other"),
+        ]
     )
-    details = TextAreaField('Purpose of request',)
+
+    details = TextAreaField("Request details", [DataRequired()])
     submit = SubmitField("Submit Request")
     

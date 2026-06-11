@@ -3,6 +3,7 @@
         <div class="col-lg-7">
             <h2>Request to View This Item</h2>
             <p>Some items require access approval before viewing. Submit the form below so library staff and community reviewers can assess the request.</p>
+{% if current_user.is_authenticated %}
 {% block content %}
 <div class="container">
     <h2>Access Request</h2>
@@ -10,29 +11,7 @@
     <form method="post">
        
 
-        <div class="mb-3">
-            {{ form.name.label(class="form-label") }}
-            {{ form.name(
-                class="form-control",
-                placeholder="Please enter your Name",
-                value=session.get("name"),
-                disabled="True"               
-                ) 
-            }}
-        </div>
-
-        <div class="mb-3">
-            {{ form.email.label(class="form-label") }}
-            {{ form.email(
-                class="form-control",
-                placeholder="Please enter your email address",
-                value=session.get("email"),
-                disabled="True"
-                ) 
-            }}
-        </div>
-
-        <div class="mb-3">
+       <div class="mb-3">
             {{ form.purpose.label(class="form-label") }}
             {{ form.purpose(
                 class="form-select"
@@ -54,7 +33,31 @@
     </form>
 </div>
 {% endblock %}
-          
+{% else %}
+<div class="container">
+    <div class="row">
+        <div class="col-lg-12 mb-3">
+            <p>
+                Non {{ access_badge("Public") }} archive items are restricted to registered users with appropriate access levels.
+            </p>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <p class="mb-2">No account?</p>
+            <a href="{{ url_for('register') }}" class="btn btn-primary w-100">
+                Register to request access
+            </a>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <p class="mb-2">Already have an account?</p>
+            <a href="{{ url_for('login') }}" class="btn btn-secondary w-100">
+                Login
+            </a>
+        </div>
+    </div>
+</div>
+{% endif %}
             </div>
         <div class="col-lg-5">
       <div class="decision-box">

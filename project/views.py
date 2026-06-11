@@ -1,7 +1,7 @@
 from datetime import date
 
 from flask import abort, flash, redirect, render_template, request, session, url_for
-from flask_login import login_required, login_user, logout_user
+from flask_login import login_required, login_user, logout_user, current_user
 
 from project import app
 from project.forms import LoginForm, MetadataForm, RegistrationForm, AccessRequestForm
@@ -16,6 +16,8 @@ from project.models import (
     row,
     rows,
     verify_user_password,
+    fetch_user_requests,
+    fetch_user_request
 )
 
 
@@ -154,15 +156,24 @@ def item_detail(item_id: str = "I001"):
         (item_id,),
     )
 
+    request_row = None
+
+    if current_user.is_authenticated:
+        request_row = fetch_user_request(current_user.id,item_id)
+
     if request.method == "POST" and form.validate():
-        request_id = next_id("AccessRequest", "requestID", "Q")
-        purpose = request.form.get("purpose", "").strip()
-        details = request.form.get("details", "").strip()
+        if session.get("userID") is None:
+            flash("You must be logged in to request access.", "warning")
+            return redirect(url_for("login"))
+        
+        request_id = next_id("accessrequest", "requestID", "Q")
+        purpose = form.purpose.data.strip()
+        details = form.details.data.strip()
         full_purpose = purpose if not details else f"{purpose}: {details}"
 
         execute(
             """
-            INSERT INTO AccessRequest
+            INSERT INTO accessrequest
             (requestID, itemID, userID, requestDate, requestStatus, purpose)
             VALUES (%s, %s, %s, %s, %s, %s)
             """,
@@ -177,37 +188,9 @@ def item_detail(item_id: str = "I001"):
         ) 
         
         flash("Your request has been received. You will be notified of the request outcome", "success")
-
-    return render_template("item_detail.html", item=item, requirements=requirements, form=form)
-
-
-@app.route("/request-access/<item_id>", methods=["POST"])
-def request_access(item_id: str):
-    if fetch_item(item_id) is None:
-        abort(404)
-
-    request_id = next_id("AccessRequest", "requestID", "Q")
-    purpose = request.form.get("purpose", "").strip()
-    details = request.form.get("details", "").strip()
-    full_purpose = purpose if not details else f"{purpose}: {details}"
-
-    execute(
-        """
-        INSERT INTO AccessRequest
-        (requestID, itemID, userID, requestDate, requestStatus, purpose)
-        VALUES (%s, %s, %s, %s, %s, %s)
-        """,
-        (
-            request_id,
-            item_id,
-            session.get("userID"),
-            date.today().isoformat(),
-            "Pending",
-            full_purpose,
-        ),
-    )
-    return redirect(url_for("item_detail", item_id=item_id, requested="1"))
-
+        return redirect(url_for("item_detail", item_id=item_id))
+    
+    return render_template("item_detail.html", item=item, requirements=requirements, form=form, access_request=request_row)
 
 @app.route("/item-assessment")
 @app.route("/item-assessment.html")
@@ -322,13 +305,6 @@ def login():
 
     return render_template("login.html", form=form)
 
-
-@app.route("/account", methods=["GET", "POST"])
-@login_required
-def account():
-    return render_template("account.html")
-
-
 @app.route("/logout")
 @login_required
 def logout():
@@ -336,3 +312,9 @@ def logout():
     session.clear()
     flash("You have been logged out.", "success")
     return redirect(url_for("home"))
+
+@app.route("/account", methods=["GET", "POST"])
+@login_required
+def account():
+    request_rows = fetch_user_requests(current_user.id)
+    return render_template("account.html", requests=request_rows)

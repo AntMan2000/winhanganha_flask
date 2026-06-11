@@ -12,6 +12,18 @@
   {% endif %}
 {%- endmacro %}
 
+
+{% macro request_badge(request_status) -%}
+  {% if request_status == "Pending" %}
+    <span class="badge bg-warning text-dark">Pending</span>
+  {% elif request_status == "Approved" %}
+    <span class="badge bg-success">Approved</span>
+  {% elif request_status == "Rejected" %}
+    <span class="badge bg-danger">Rejected</span>
+  {% else %}
+    <span class="badge bg-secondary">{{ request_status }}</span>
+  {% endif %}
+{%- endmacro %}  
 <!-- #https://github.com/hack4impact/flask-base/blob/master/app/templates/partials/_flashes.html
 {% macro render_flashes(class) %}
     {% with msgs = get_flashed_messages(category_filter=[class]) %}
