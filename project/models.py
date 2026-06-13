@@ -14,7 +14,7 @@ class User(UserMixin):
     # def get_id(self):
     #     return str(self.id)
 
-class Permision:
+class Permission:
         PUBLIC = 1
         USER = 2
         ARCHIVIST = 4
@@ -41,29 +41,23 @@ class Role:
     def insert_roles():
         roles = {
             "Public": {
-                "permissions": Permision.PUBLIC,
+                "permissions": Permission.PUBLIC,
                 "tasks": "Can view public items"
             },
             "User": {
-                "permissions": Permision.PUBLIC | Permision.USER,
+                "permissions": Permission.PUBLIC | Permission.USER,
                 "tasks": "Can view public items and request access to restricted items"
             },
             "Archivist": {
-                "permissions": Permision.PUBLIC | Permision.USER | Permision.ARCHIVIST,
+                "permissions": Permission.PUBLIC | Permission.USER | Permission.ARCHIVIST,
                 "tasks": "Can view and edit archive items"
             },
             "Reviewer": {
-                "permissions": Permision.PUBLIC | Permision.USER | Permision.ARCHIVIST | Permision.REVIEWER,
+                "permissions": Permission.PUBLIC | Permission.USER | Permission.ARCHIVIST | Permission.REVIEWER,
                 "tasks": "Can view, edit, review, approve access requests and change access levels"
             },
             "Administrator": {
-                "permissions": (
-                    Permision.PUBLIC
-                    | Permision.USER
-                    | Permision.ARCHIVIST
-                    | Permision.REVIEWER
-                    | Permision.ADMINISTRATOR
-                ),
+                "permissions": Permission.PUBLIC | Permission.USER | Permission.ARCHIVIST | Permission.REVIEWER | Permission.ADMINISTRATOR,
                 "tasks": "Can manage all aspects of the system"
             }
         }
