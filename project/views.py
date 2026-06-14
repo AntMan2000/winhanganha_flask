@@ -300,9 +300,9 @@ def login():
         email = form.email.data
         password = form.password.data
         user_row = verify_user_password(email, password)
-
+        permission = fetch_role_by_permission(user_row["permissions"])
         if user_row:
-            user = User(user_row["userID"], user_row["role"], user_row["preferred_title"], user_row["name"], user_row["email"])
+            user = User(user_row["userID"], permission, user_row["preferred_title"], user_row["name"], user_row["email"])
             login_user(user)
 # #class User(UserMixin):
 #     def __init__(self, userID, role, preferred_title, name, email):
@@ -313,7 +313,7 @@ def login():
 #         self.name = name
 #         self.email = email
             session["userID"] = user_row["userID"]
-            session["role"] = user_row["role"]
+            session["role"] = permission
             session["preferred_title"] = user_row["preferred_title"]
             session["name"] = user_row["name"]
             session["email"] = user_row["email"]

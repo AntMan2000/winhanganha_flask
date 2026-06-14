@@ -10,12 +10,14 @@ class Permission:
         REVIEWER = 8        
         ADMINISTRATOR = 16
 
+#return User(user["userID"], permission["role"], permission["permissions"], user["preferred_title"], user["name"], user["email"])
+
 class User(UserMixin):
-    def __init__(self, userID, role, preferred_title, name, email):
+    def __init__(self, userID, permissions, preferred_title, name, email):
         self.id = str(userID)
         self.userID = userID
-        self.role = role
-        self.permissions = role["permissions"]
+        self.role = permissions
+        self.permissions = permissions["permissions"]
         self.preferred_title = preferred_title
         self.name = name
         self.email = email
@@ -161,7 +163,10 @@ def fetch_role_by_permission(permissions):
     if result:
         return result
 
-    return None
+    result["name"] = "Public"
+    result["permissions"] = 1
+    
+    return result
 
 def fetch_all_roles():
     return rows(
@@ -311,7 +316,7 @@ def create_user(preferred_title, name, email, password):
 def get_user_by_email(email):
     return row(
         """
-        SELECT userID, role, preferred_title, name, email, passwordHash
+        SELECT userID, permissions, preferred_title, name, email, passwordHash
         FROM Users
         WHERE email = %s
         """,
@@ -322,7 +327,7 @@ def get_user_by_email(email):
 def get_user_by_id(userID):
     return row(
         """
-        SELECT userID, role, preferred_title, name, email, passwordHash
+        SELECT userID, permissions, preferred_title, name, email, passwordHash
         FROM Users
         WHERE userID = %s
         """,
@@ -365,12 +370,11 @@ def load_user(user_id):
     if user is None:
         return None
     
-    permission = fetch_role_by_permission(user["role"])
-    
-    if user["preferred_title"] is None:
-        user["preferred_title"] = ""
-        
+    permission = fetch_role_by_permission(user["permissions"])
+               
     return User(user["userID"], permission, user["preferred_title"], user["name"], user["email"])
+
+
 
 def load_users():
     users = rows(
