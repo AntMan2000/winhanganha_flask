@@ -59,3 +59,11 @@ class AccessRequestForm(Form):
     details = TextAreaField("Request details", [DataRequired()])
     submit = SubmitField("Submit Request")
     
+class AdminPermissionForm(Form):
+    permission = SelectField(
+        "Role",
+        choices=[],
+        coerce=int,
+        validators=[DataRequired()]
+    )
+    

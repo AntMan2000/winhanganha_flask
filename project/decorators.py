@@ -1,6 +1,7 @@
 from functools import wraps
 from flask import abort
 from flask_login import login_required, current_user
+from project.models import Permission
 
 
 def permission_required(permission):
@@ -16,3 +17,7 @@ def permission_required(permission):
         return wrapper
 
     return decorator
+
+
+def is_administrator(func):
+    return permission_required(Permission.ADMINISTRATOR)(func)

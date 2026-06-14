@@ -46,6 +46,11 @@
         <strong>Account note:</strong>
         Restricted item access may require review by authorised staff or community representatives.
       </div>
+          {% if current_user.is_authenticated and current_user.is_administrator() %}
+            <a href="{{ url_for('dashboard') }}" class="btn btn-dark mybutton me-2">
+              Admin Dashboard
+            </a>
+          {% endif %}
     </div>
   </div>
 

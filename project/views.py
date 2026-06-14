@@ -2,8 +2,10 @@ from datetime import date
 
 from flask import abort, flash, redirect, render_template, request, session, url_for
 from flask_login import login_required, login_user, logout_user, current_user
+from wtforms import form
 
 from project import app
+from project.decorators import permission_required, is_administrator
 from project.forms import LoginForm, MetadataForm, RegistrationForm, AccessRequestForm
 from project.models import (
     User,
@@ -11,13 +13,16 @@ from project.models import (
     execute,
     fetch_collections,
     fetch_item,
+    fetch_role_by_permission,
     get_user_reviewer,
+    load_users,
     next_id,
     row,
     rows,
     verify_user_password,
     fetch_user_requests,
     fetch_user_request,
+    fetch_all_roles,
     Role,
     Permission,
     
@@ -340,3 +345,28 @@ def logout():
 def account():
     request_rows = fetch_user_requests(current_user.id)
     return render_template("account.html", requests=request_rows)
+
+@app.route("/dashboard", methods=["GET", "POST"])
+@login_required
+@is_administrator
+def dashboard():
+   
+    if request.method == "POST":
+        user_id = request.form.get("userID")
+        role_id =  request.form.get("role")
+        new_role = fetch_role_by_permission(role_id)
+        execute(
+            """
+            UPDATE Users
+            SET role = %s
+            WHERE userID = %s
+            """,
+            (new_role["permissions"], user_id),
+        )
+        flash("User role updated successfully.", "success")
+        return redirect(url_for("dashboard"))
+    
+    
+    request_users = load_users()
+    all_roles = fetch_all_roles()
+    return render_template("admin.html", users=request_users, roles=all_roles)

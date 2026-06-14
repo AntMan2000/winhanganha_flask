@@ -3,28 +3,32 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from project import login_manager, mysql
 
-
-class User(UserMixin):
-    def __init__(self, userID, role, preferred_title, name, email):
-        self.id = str(userID)
-        self.userID = userID
-        self.role = role
-        self.preferred_title = preferred_title
-        self.name = name
-        self.email = email
-
-    # def get_id(self):
-    #     return str(self.id)
-
 class Permission:
         PUBLIC = 1
         USER = 2
         ARCHIVIST = 4
         REVIEWER = 8        
         ADMINISTRATOR = 16
-        
+
+class User(UserMixin):
+    def __init__(self, userID, role, preferred_title, name, email):
+        self.id = str(userID)
+        self.userID = userID
+        self.role = role
+        self.permissions = role["permissions"]
+        self.preferred_title = preferred_title
+        self.name = name
+        self.email = email
+
+    def can(self, permission):
+        return (self.permissions & permission) == permission
+
+    def is_administrator(self):
+        return self.can(Permission.ADMINISTRATOR)
+    
+      
 class Role:
-    def __init__(self, name, permissions=0):
+    def __init__(self, name, permissions=Permission.PUBLIC):
         self.name = name
         self.permissions = permissions
 
@@ -38,7 +42,8 @@ class Role:
 
     def has_permission(self, perm):
         return (self.permissions & perm) == perm
-
+    
+    
     @staticmethod
     def all_roles():
         return {
@@ -158,7 +163,13 @@ def fetch_role_by_permission(permissions):
 
     return None
 
-
+def fetch_all_roles():
+    return rows(
+        """
+        SELECT *
+        FROM Roles
+        """
+    )
 
 
 def rows(sql, params=None):
@@ -360,3 +371,19 @@ def load_user(user_id):
         user["preferred_title"] = ""
         
     return User(user["userID"], permission, user["preferred_title"], user["name"], user["email"])
+
+def load_users():
+    users = rows(
+        """
+        SELECT 
+            u.userID, 
+            r.name AS role, 
+            u.preferred_title, 
+            u.name, 
+            u.email
+        FROM Users u
+        JOIN Roles r ON u.role = r.permissions
+        
+        """
+    )
+    return users
