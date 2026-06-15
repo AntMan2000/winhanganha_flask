@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost
--- Generation Time: Jun 14, 2026 at 12:05 PM
+-- Generation Time: Jun 15, 2026 at 08:02 AM
 -- Server version: 5.7.11
 -- PHP Version: 8.3.3
 
@@ -48,8 +48,10 @@ INSERT INTO `accessrequest` (`requestID`, `itemID`, `userID`, `requestDate`, `re
 ('Q005', 'I001', '', '2026-06-10', 'Pending', ''),
 ('Q006', 'I001', '', '2026-06-10', 'Pending', ''),
 ('Q007', 'I001', '', '2026-06-10', 'Pending', ''),
-('Q008', 'I001', 'U005', '2026-06-12', 'Pending', 'Lore: research my history'),
-('Q009', 'I002', 'U005', '2026-06-13', 'Pending', 'Research: test');
+('Q008', 'I001', 'U005', '2026-06-12', 'Cancel', 'Lore: research my history'),
+('Q009', 'I002', 'U005', '2026-06-13', 'Cancel', 'Research: test'),
+('Q010', 'I002', 'U005', '2026-06-15', 'Pending', 'Lore: test'),
+('Q011', 'I006', 'U005', '2026-06-15', 'Pending', 'Research: qwerty');
 
 -- --------------------------------------------------------
 
@@ -181,7 +183,9 @@ INSERT INTO `collectionitem` (`itemID`, `collectionID`, `title`, `description`, 
 ('I003', 'C003', 'Mission Station Photograph', 'Digitised historical photograph with provenance notes', 'Image', 'img/placeholder.png', '', 'Queensland', 'Multiple communities', 'Approved', 'Digitised image', '2026-05-21', NULL),
 ('I004', 'C002', 'Ceremony Reference Record', 'A culturally sensitive record held for assessment before any public description or access decision is made.', 'Audio transcript and cultural note', 'img/placeholder.png', '', 'Central West New South Wales', 'Wiradjuri', 'Under Assessment', 'Audio transcript and cultural note', NULL, '1985'),
 ('I005', 'C003', 'Community Meeting Notes', 'Digitised notes from a community consultation meeting about cultural care, access conditions and description.', 'Document', 'img/placeholder.png', '', NULL, NULL, 'Private', 'Digitised document', '2026-05-22', NULL),
-('I006', 'C001', 'Place Name Record', 'A record connecting language, Country, place names and approved cultural description.', 'Place Record', 'img/placeholder.png', '', NULL, NULL, 'Restricted', 'Text record', '2026-05-22', NULL);
+('I006', 'C001', 'Place Name Record', 'A record connecting language, Country, place names and approved cultural description.', 'Place Record', 'img/placeholder.png', '', NULL, NULL, 'Restricted', 'Text record', '2026-05-22', NULL),
+('I008', 'C003', 'trew', 'qwert', 'Image', 'uploads/fd78c1865ed44b4eb4ecf2d208045c21.png', 'uploads/0d7a838dc0e647899042448f1af8dad4.pdf', 'asdfgh', 'zxscdvfgbhngdfbvdfs', 'Under Assessment', NULL, '2026-06-15', NULL),
+('I009', 'C001', 'qwerty', 'poiuytrewqasdfghjkl sdfghnjghbgfd', 'Document', 'uploads/2fe5caab19e445a2b52942f6159ccfe9.jpg', 'uploads/46da7636c6cf49ab875a2cf87ada2209.pdf', 'home', 'qwertyuioooooolk,mnbvcvfgtytgfds', 'Under Assessment', 'PDF document', '2026-06-15', NULL);
 
 -- --------------------------------------------------------
 
@@ -192,13 +196,13 @@ INSERT INTO `collectionitem` (`itemID`, `collectionID`, `title`, `description`, 
 CREATE TABLE `culturalmetadata` (
   `metadataID` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
   `itemID` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `ownership` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `ownership` varchar(150) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `accessLevel` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
   `recommendedAccessLevel` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `culturalSensitivity` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `culturalNotes` text COLLATE utf8mb4_unicode_ci NOT NULL,
-  `accessConditions` text COLLATE utf8mb4_unicode_ci NOT NULL,
-  `communityApprovalStatus` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL
+  `culturalSensitivity` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `culturalNotes` text COLLATE utf8mb4_unicode_ci,
+  `accessConditions` text COLLATE utf8mb4_unicode_ci,
+  `communityApprovalStatus` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -211,7 +215,9 @@ INSERT INTO `culturalmetadata` (`metadataID`, `itemID`, `ownership`, `accessLeve
 ('M003', 'I003', 'Library collection', 'Public', NULL, 'Low', 'Use with acknowledgement', '', 'Approved'),
 ('M004', 'I004', 'Community held', 'Under Review', NULL, 'High', 'Item may contain references to restricted knowledge. Confirm whether names, places and descriptive terms can be shown in the public catalogue.', 'test', 'Awaiting Elder review'),
 ('M005', 'I005', 'Community consultation record', 'Private', NULL, 'High', 'Contains internal consultation material and community decision-making context. Not available for public release.', '', 'Not approved for public release'),
-('M006', 'I006', 'Community held', 'Restricted', NULL, 'Medium', 'Contains place-based knowledge and language information. Access to detailed place data requires approval.', '', 'Approved with restrictions');
+('M006', 'I006', 'Community held', 'Restricted', NULL, 'Medium', 'Contains place-based knowledge and language information. Access to detailed place data requires approval.', '', 'Approved with restrictions'),
+('M007', 'I008', NULL, 'Under Assessment', NULL, NULL, NULL, NULL, NULL),
+('M008', 'I009', NULL, 'Under Assessment', NULL, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -285,8 +291,8 @@ INSERT INTO `users` (`userID`, `permissions`, `preferred_title`, `name`, `email`
 ('U003', '7', NULL, 'Leah Morgan', 'leah.morgan@fnwa.org', NULL),
 ('U004', '15', 'Uncle', 'Robert Evans', 'robert.evans@fnwa.org', NULL),
 ('U005', '31', NULL, 'Wayne Stack', 'wayne@technetik.com.au', 'scrypt:32768:8:1$mU0g8vWcA2a9aQbZ$1700240d81081e5c7b20b04067aa2ef6e2bc514a0fcfc67b0e377a968ddc834800986fdd63b612a53a14b77833b35f54588ca84f616f6fb3a2f27a2d2d9dd86d'),
-('U006', '15', 'Uncle', 'Theodore Stack', 'here@there.com.au', 'scrypt:32768:8:1$4DXOjKGuBMImvRms$5dfa73e698985df9d4b972b66b88281c4e4a4ea960aa701c65490a45d480c6cd8dd486570dccf68880911679733b6719d8b6d1cddc811f593492d42a494d1e2f'),
-('U007', '31', 'Dr.', 'Charles Montgomery Stack', 'there@here.com', 'scrypt:32768:8:1$qqzgQJfLkRKfts7l$943096b5e0b361359c00c3570c67cc9ea4157e750ce30c420d9e1a25897bc369901c956fac1b5af54176a117ca9acb6863eab24a245a731a5d52ccd121e6da5b');
+('U006', '3', 'Uncle', 'Theodore Stack', 'here@there.com.au', 'scrypt:32768:8:1$4DXOjKGuBMImvRms$5dfa73e698985df9d4b972b66b88281c4e4a4ea960aa701c65490a45d480c6cd8dd486570dccf68880911679733b6719d8b6d1cddc811f593492d42a494d1e2f'),
+('U007', '15', 'Dr.', 'Charles Montgomery Stack', 'there@here.com', 'scrypt:32768:8:1$qqzgQJfLkRKfts7l$943096b5e0b361359c00c3570c67cc9ea4157e750ce30c420d9e1a25897bc369901c956fac1b5af54176a117ca9acb6863eab24a245a731a5d52ccd121e6da5b');
 
 --
 -- Indexes for dumped tables
