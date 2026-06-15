@@ -141,6 +141,21 @@ class Role:
 # Archivist: Can view and edit all items can not approve access requests or change access levels (permissions 1 + 2 + 4 = 7)
 # Reviewer: Can view and review items (permissions 1 + 2 + 8 = 11)
 # Administrator: Can manage all aspects of the system (permissions 1 + 2 + 4 + 8 + 16 = 31)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 def fetch_role_by_name(role_name):
     result = row(
         """
@@ -206,6 +221,10 @@ def execute(sql, params=None):
     try:
         cur.execute(sql, params or ())
         mysql.connection.commit()
+        return cur.rowcount
+    except:
+        mysql.connection.rollback()
+        raise
     finally:
         cur.close()
 
@@ -438,3 +457,253 @@ def load_users(userID = ''):
 def allowed_file(filename, allowed_extensions=ALLOWED_EXTENSIONS):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in allowed_extensions
+
+def update_user_permissions(user_id,role):
+    update_permission = execute(
+        """
+        UPDATE Users
+        SET permissions = %s
+        WHERE userID = %s
+        """,
+        (role, user_id),
+     )
+
+    return update_permission == 1
+ 
+
+def add_new_item(array):
+     item_insert = execute(
+            """
+            INSERT INTO CollectionItem
+            (
+                itemID,
+                collectionID,
+                title,
+                description,
+                itemType,
+                place,
+                languageGroup,
+                status,
+                format,
+                imagePath,
+                recordPath,
+                dateAdded
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """,
+            (
+                array["item_id"],
+                array["collection_id"],
+                array["title"],
+                array["description"],
+                array["item_type"],
+                array["place"],
+                array["language_group"],
+                "Under Assessment",
+                array["record_format"],
+                array["img_path"],
+                array["record_path"],
+                array["date_added"],
+            ),
+        )
+
+     meta_insert = execute(
+            """
+            INSERT INTO culturalmetadata
+            (
+                metadataID,
+                itemID,
+                accessLevel
+            )
+            VALUES (%s, %s, %s)
+            """,
+            (
+                array["meta_id"],
+                array["item_id"],
+                "Under Assessment",
+             ),
+         )
+
+     return item_insert == 1 and meta_insert == 1
+
+def get_assessment_rows():
+
+     assessment_rows = rows(
+        """
+        SELECT 
+               ci.itemID AS item_id,
+               ci.title,
+               ci.description,
+               ci.itemType AS item_type,
+               ci.place,
+               ci.languageGroup AS language_group,
+               ci.status,
+               ci.dateRecorded AS date_recorded,
+               ci.imagePath AS image_filename,
+               c.collectionName AS collection_name,
+               cm.accessLevel AS access_level,
+               cm.recommendedAccessLevel AS recommended_access_level,
+               cm.culturalSensitivity AS cultural_sensitivity,
+               cm.communityApprovalStatus AS review_status,
+               cm.culturalNotes AS cultural_notes,
+               cm.accessConditions AS access_conditions,
+               ci.description AS public_description
+        FROM CollectionItem ci
+        JOIN Collection c ON c.collectionID = ci.collectionID
+        JOIN CulturalMetadata cm ON cm.itemID = ci.itemID
+        WHERE ci.status = 'Under Assessment'
+        ORDER BY ci.itemID
+        """
+    )
+    
+     return assessment_rows
+
+def get_featured_items():
+    featured_items = rows(
+        """
+        SELECT ci.itemID AS item_id,
+               ci.title,
+               ci.description,
+               ci.itemType AS item_type,
+               ci.imagePath AS image_filename,
+               c.collectionName AS collection_name,
+               cm.accessLevel AS access_level,
+               cm.communityApprovalStatus AS review_status
+        FROM CollectionItem ci
+        JOIN Collection c ON c.collectionID = ci.collectionID
+        JOIN CulturalMetadata cm ON cm.itemID = ci.itemID
+        WHERE cm.accessLevel = 'Public'
+          AND cm.communityApprovalStatus = 'Approved'
+        ORDER BY ci.itemID
+        LIMIT 3
+        """
+    )
+    return featured_items
+
+def get_item_metadata(item_id):
+    requirements = rows(
+        """
+        SELECT metadataID AS requirement_id,
+               culturalNotes AS requirement_text
+        FROM CulturalMetadata
+        WHERE itemID = %s
+        """,
+        (item_id,),
+    )
+
+    return requirements
+
+
+def submit_access_request(request_array):
+    execute(
+            """
+            INSERT INTO accessrequest
+            (requestID, itemID, userID, requestDate, requestStatus, purpose)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            """,
+            (
+                request_array["request_id"],
+                request_array["item_id"],
+                current_user.userID,
+                date.today().isoformat(),
+                "Pending",
+                request_array["full_purpose"],
+            ),
+        ) 
+
+def fetch_filtered_items(filters):
+    sql = """
+        SELECT ci.itemID AS item_id,
+               ci.title,
+               ci.description,
+               ci.itemType AS item_type,
+               ci.place,
+               ci.languageGroup AS language_group,
+               ci.status,
+               ci.imagePath AS image_filename,
+               c.collectionName AS collection_name,
+               cm.accessLevel AS access_level,
+               cm.communityApprovalStatus AS review_status,
+               cm.culturalSensitivity AS cultural_sensitivity
+        FROM CollectionItem ci
+        JOIN Collection c ON c.collectionID = ci.collectionID
+        JOIN CulturalMetadata cm ON cm.itemID = ci.itemID
+        WHERE ci.status != 'Under Assessment'
+    """
+
+    params = []
+
+    search = filters.get("search")
+    collection = filters.get("collection")
+    access_level = filters.get("access_level")
+    item_type = filters.get("item_type")
+    review_status = filters.get("review_status")
+
+    if search:
+        sql += """
+            AND (
+                ci.title LIKE %s
+                OR ci.description LIKE %s
+                OR ci.languageGroup LIKE %s
+                OR ci.place LIKE %s
+                OR c.collectionName LIKE %s
+            )
+        """
+        term = f"%{search}%"
+        params.extend([term, term, term, term, term])
+
+    if collection:
+        sql += " AND c.collectionName = %s"
+        params.append(collection)
+
+    if access_level:
+        sql += " AND cm.accessLevel = %s"
+        params.append(access_level)
+
+    if item_type:
+        sql += " AND ci.itemType = %s"
+        params.append(item_type)
+
+    if review_status:
+        sql += " AND cm.communityApprovalStatus = %s"
+        params.append(review_status)
+
+    sql += " ORDER BY ci.itemID"
+
+    return rows(sql, params)
+
+
+def fetch_item_type_filters():
+    return rows(
+        """
+        SELECT DISTINCT itemType AS item_type
+        FROM CollectionItem
+        WHERE itemType IS NOT NULL
+          AND itemType != ''
+        ORDER BY itemType
+        """
+    )
+
+
+def fetch_access_level_filters():
+    return rows(
+        """
+        SELECT DISTINCT accessLevel AS access_level
+        FROM CulturalMetadata
+        WHERE accessLevel IS NOT NULL
+          AND accessLevel != ''
+        ORDER BY accessLevel
+        """
+    )
+
+
+def fetch_review_status_filters():
+    return rows(
+        """
+        SELECT DISTINCT communityApprovalStatus AS review_status
+        FROM CulturalMetadata
+        WHERE communityApprovalStatus IS NOT NULL
+          AND communityApprovalStatus != ''
+        ORDER BY communityApprovalStatus
+        """
+    )

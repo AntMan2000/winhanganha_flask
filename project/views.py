@@ -12,28 +12,38 @@ from project import ALLOWED_EXTENSIONS, ALLOWED_IMG_EXTENSIONS, app
 from project.decorators import permission_required, is_administrator
 from project.forms import LoginForm, MetadataForm, RegistrationForm, AccessRequestForm, AddItemForm, CancelUserRequest
 from project.models import (
+    Permission,
+    Role,
     User,
+    add_new_item,
+    allowed_file,
     cancel_user_request,
     create_user,
     execute,
+    fetch_access_level_filters,
+    fetch_all_roles,
     fetch_collections,
+    fetch_filtered_items,
     fetch_item,
     fetch_item_status,
+    fetch_item_type_filters,
+    fetch_review_status_filters,
     fetch_role_by_permission,
+    fetch_user_request,
+    fetch_user_request_by_ID,
+    fetch_user_requests,
+    get_assessment_rows,
+    get_featured_items,
+    get_item_metadata,
     get_user_reviewer,
     load_users,
     next_id,
     row,
     rows,
-    verify_user_password,
-    fetch_user_requests,
-    fetch_user_request,
-    fetch_user_request_by_ID,
-    fetch_all_roles,
-    Role,
-    Permission,
     secure_filename,
-    allowed_file,
+    submit_access_request,
+    update_user_permissions,
+    verify_user_password,
 )
 
 @app.errorhandler(403)
@@ -52,25 +62,7 @@ def internal_error(e):
 
 @app.route("/")
 def home():
-    featured_items = rows(
-        """
-        SELECT ci.itemID AS item_id,
-               ci.title,
-               ci.description,
-               ci.itemType AS item_type,
-               ci.imagePath AS image_filename,
-               c.collectionName AS collection_name,
-               cm.accessLevel AS access_level,
-               cm.communityApprovalStatus AS review_status
-        FROM CollectionItem ci
-        JOIN Collection c ON c.collectionID = ci.collectionID
-        JOIN CulturalMetadata cm ON cm.itemID = ci.itemID
-        WHERE cm.accessLevel = 'Public'
-          AND cm.communityApprovalStatus = 'Approved'
-        ORDER BY ci.itemID
-        LIMIT 3
-        """
-    )
+    featured_items = get_featured_items()
     return render_template(
         "index.html",
         collections=fetch_collections(),
@@ -80,78 +72,24 @@ def home():
 
 @app.route("/items")
 def items():
-    search = request.args.get("search", "").strip()
-    collection = request.args.get("collection", "").strip()
-    access_level = request.args.get("access_level", "").strip()
-    item_type = request.args.get("item_type", "").strip()
-    review_status = request.args.get("review_status", "").strip()
+    filters = {
+        "search": request.args.get("search", "").strip(),
+        "collection": request.args.get("collection", "").strip(),
+        "access_level": request.args.get("access_level", "").strip(),
+        "item_type": request.args.get("item_type", "").strip(),
+        "review_status": request.args.get("review_status", "").strip(),
+    }
 
-    sql = """
-        SELECT ci.itemID AS item_id,
-               ci.title,
-               ci.description,
-               ci.itemType AS item_type,
-               ci.place,
-               ci.languageGroup AS language_group,
-               ci.status,
-               ci.imagePath AS image_filename,
-               c.collectionName AS collection_name,
-               cm.accessLevel AS access_level,
-               cm.communityApprovalStatus AS review_status,
-               cm.culturalSensitivity AS cultural_sensitivity
-        FROM CollectionItem ci
-        JOIN Collection c ON c.collectionID = ci.collectionID
-        JOIN CulturalMetadata cm ON cm.itemID = ci.itemID
-        WHERE status != 'Under Assessment'
-    """
-    params = []
-
-    if search:
-        sql += """
-            AND (
-                ci.title LIKE %s
-                OR ci.description LIKE %s
-                OR ci.languageGroup LIKE %s
-                OR ci.place LIKE %s
-                OR c.collectionName LIKE %s
-            )
-        """
-        term = f"%{search}%"
-        params.extend([term, term, term, term, term])
-    if collection:
-        sql += " AND c.collectionName = %s"
-        params.append(collection)
-    if access_level:
-        sql += " AND cm.accessLevel = %s"
-        params.append(access_level)
-    if item_type:
-        sql += " AND ci.itemType = %s"
-        params.append(item_type)
-    if review_status:
-        sql += " AND cm.communityApprovalStatus = %s"
-        params.append(review_status)
-
-    sql += " ORDER BY ci.itemID"
-
-    item_rows = rows(sql, params)
-    item_types = rows("SELECT DISTINCT itemType AS item_type FROM CollectionItem ORDER BY itemType")
-    access_levels = rows("SELECT DISTINCT accessLevel AS access_level FROM CulturalMetadata ORDER BY accessLevel")
-    review_statuses = rows("SELECT DISTINCT communityApprovalStatus AS review_status FROM CulturalMetadata ORDER BY communityApprovalStatus")
+    item_rows = fetch_filtered_items(filters)
 
     return render_template(
         "items.html",
         items=item_rows,
         collections=fetch_collections(),
-        item_types=item_types,
-        access_levels=access_levels,
-        review_statuses=review_statuses,
-        filters={
-            "search": search,
-            "collection": collection,
-            "access_level": access_level,
-            "item_type": item_type,
-            "review_status": review_status,
-        },
+        item_types=fetch_item_type_filters(),
+        access_levels=fetch_access_level_filters(),
+        review_statuses=fetch_review_status_filters(),
+        filters=filters,
     )
 
 
@@ -170,15 +108,7 @@ def item_detail(item_id):
         if not current_user.can(Permission.REVIEWER):
             abort(403)
 
-    requirements = rows(
-        """
-        SELECT metadataID AS requirement_id,
-               culturalNotes AS requirement_text
-        FROM CulturalMetadata
-        WHERE itemID = %s
-        """,
-        (item_id,),
-    )
+    requirements = get_item_metadata(item_id)
 
     request_row = None
 
@@ -186,67 +116,30 @@ def item_detail(item_id):
         request_row = fetch_user_request(current_user.id,item_id)
 
     if request.method == "POST" and form.validate():
+        request_array = {}
         if session.get("userID") is None:
             flash("You must be logged in to request access.", "warning")
             return redirect(url_for("login"))
         
-        request_id = next_id("accessrequest", "requestID", "Q")
+        request_array["request_id"] = next_id("accessrequest", "requestID", "Q")
         purpose = form.purpose.data.strip()
         details = form.details.data.strip()
-        full_purpose = purpose if not details else f"{purpose}: {details}"
+        request_array["full_purpose"] = purpose if not details else f"{purpose}: {details}"
 
-        execute(
-            """
-            INSERT INTO accessrequest
-            (requestID, itemID, userID, requestDate, requestStatus, purpose)
-            VALUES (%s, %s, %s, %s, %s, %s)
-            """,
-            (
-                request_id,
-                item_id,
-                session.get("userID"),
-                date.today().isoformat(),
-                "Pending",
-                full_purpose,
-            ),
-        ) 
+
+        success = submit_access_request(request_array)
         
         flash("Your request has been received. You will be notified of the request outcome", "success")
         return redirect(url_for("item_detail", item_id=item_id))
     
     return render_template("item_detail.html", item=item, requirements=requirements, form=form, access_request=request_row)
 
+
 @app.route("/item-assessments")
 @login_required
 @permission_required(Permission.REVIEWER)
 def assessments():
-    assessment_rows = rows(
-        """
-        SELECT 
-               ci.itemID AS item_id,
-               ci.title,
-               ci.description,
-               ci.itemType AS item_type,
-               ci.place,
-               ci.languageGroup AS language_group,
-               ci.status,
-               ci.dateRecorded AS date_recorded,
-               ci.imagePath AS image_filename,
-               c.collectionName AS collection_name,
-               cm.accessLevel AS access_level,
-               cm.recommendedAccessLevel AS recommended_access_level,
-               cm.culturalSensitivity AS cultural_sensitivity,
-               cm.communityApprovalStatus AS review_status,
-               cm.culturalNotes AS cultural_notes,
-               cm.accessConditions AS access_conditions,
-               ci.description AS public_description
-        FROM CollectionItem ci
-        JOIN Collection c ON c.collectionID = ci.collectionID
-        JOIN CulturalMetadata cm ON cm.itemID = ci.itemID
-        WHERE ci.status = 'Under Assessment'
-        ORDER BY ci.itemID
-        """
-    )
+    assessment_rows = get_assessment_rows()
        
     return render_template("item_assessment_list.html", assessments=assessment_rows)
 
@@ -259,52 +152,9 @@ def assessments():
 @permission_required(Permission.REVIEWER)
 def assessment_item(item_id):
 
-    assessment_row = fetch_item(item_id)
-    # assessment_row = rows(
-    # """
-    # SELECT 
-    #         ci.itemID AS item_id,
-    #         ci.title,
-    #         ci.description,
-    #         ci.itemType AS item_type,
-    #         ci.place,
-    #         ci.languageGroup AS language_group,
-    #         ci.status,
-    #         ci.dateRecorded AS date_recorded,
-    #         ci.imagePath AS image_filename,
-    #         c.collectionName AS collection_name,
-    #         cm.accessLevel AS access_level,
-    #         cm.recommendedAccessLevel AS recommended_access_level,
-    #         cm.culturalSensitivity AS cultural_sensitivity,
-    #         cm.communityApprovalStatus AS review_status,
-    #         cm.culturalNotes AS cultural_notes,
-    #         cm.accessConditions AS access_conditions,
-    #         ci.description AS public_description
-    # FROM CollectionItem ci
-    # JOIN Collection c ON c.collectionID = ci.collectionID
-    # JOIN CulturalMetadata cm ON cm.itemID = ci.itemID
-    # WHERE ci.status = 'Under Assessment'
-    # ORDER BY ci.itemID
-    # """,(item_id),
-    # )    
+    assessment_row = fetch_item(item_id) 
     return render_template("item_assessment.html", assessment=assessment_row)
 
-
-
-
-
-@app.route("/item-assess", methods=["GET", "POST"])
-def assessment():
-    return redirect(url_for("home"))
-
-# @app.route("/item-assessment", methods=["POST"])
-# def update_assessment_metadata():
-#     form = MetadataForm(request.form)
-#     if form.validate():
-#         flash("Assessment metadata saved.", "success")
-#     else:
-#         flash("Assessment metadata could not be saved.", "danger")
-#     return redirect(url_for("assessment"))
 
 
 
@@ -402,14 +252,7 @@ def dashboard():
         user_id = request.form.get("userID")
         role_id =  request.form.get("role")
         new_role = fetch_role_by_permission(role_id)
-        execute(
-            """
-            UPDATE Users
-            SET permissions = %s
-            WHERE userID = %s
-            """,
-            (new_role["permissions"], user_id),
-        )
+        update_user_permissions(new_role["permissions"], user_id)
         flash("User role updated successfully.", "success")
         return redirect(url_for("dashboard"))
     
@@ -435,22 +278,24 @@ def add_item():
     ]
 
     if request.method == "POST":
-        title = request.form.get("title")
-        description = request.form.get("description")
-        item_type = request.form.get("item_type")
-        record_format = request.form.get("record_format")
-        place = request.form.get("place")
-        language_group = request.form.get("language_group")
-        collection_id = request.form.get("collection_id")
+        dataArray = {}
+        dataArray["title"] = request.form.get("title")
+        dataArray["description"] = request.form.get("description")
+        dataArray["item_type"] = request.form.get("item_type")
+        dataArray["record_format"] = request.form.get("record_format")
+        dataArray["place"] = request.form.get("place")
+        dataArray["language_group"] = request.form.get("language_group")
+        dataArray["collection_id"] = request.form.get("collection_id")
 
         file_record = request.files.get("file_record")
         collection_img = request.files.get("item_img")
 
-        date_added = date.today().strftime("%Y-%m-%d")
-        item_id = next_id("CollectionItem", "itemID", "I")
+        dataArray["date_added"] = date.today().strftime("%Y-%m-%d")
+        dataArray["item_id"] = next_id("CollectionItem", "itemID", "I")
+        dataArray["meta_id"] = next_id("culturalmetadata", "metadataID", "M")
 
-        img_path = "img/placeholder.png"
-        record_path = None
+        dataArray["img_path"] = "img/placeholder.png"
+        dataArray["record_path"] = None
 
         if collection_img and collection_img.filename:
             if allowed_file(collection_img.filename, ALLOWED_IMG_EXTENSIONS):
@@ -460,17 +305,15 @@ def add_item():
 
                 collection_img.save(app.config["UPLOAD_FOLDER"] / img_filename)
 
-                img_path = f"uploads/{img_filename}"
+                dataArray["img_path"] = f"uploads/{img_filename}"
      
         if file_record and file_record.filename:
             if allowed_file(file_record.filename, ALLOWED_EXTENSIONS):
                 original_file_name = secure_filename(file_record.filename)
                 file_ext = original_file_name.rsplit(".", 1)[1].lower()
                 filename = f"{uuid4().hex}.{file_ext}"
-
                 file_record.save(app.config["UPLOAD_FOLDER"] / filename)
-
-                record_path = f"uploads/{filename}"
+                dataArray["record_path"] = f"uploads/{filename}"
             else:
                 flash("Invalid record file type.", "danger")
                 return redirect(url_for("add_item"))
@@ -478,61 +321,13 @@ def add_item():
             flash("You must upload a record file.", "danger")
             return redirect(url_for("add_item"))
 
-        execute(
-            """
-            INSERT INTO CollectionItem
-            (
-                itemID,
-                collectionID,
-                title,
-                description,
-                itemType,
-                place,
-                languageGroup,
-                status,
-                format,
-                imagePath,
-                recordPath,
-                dateAdded
-            )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """,
-            (
-                item_id,
-                collection_id,
-                title,
-                description,
-                item_type,
-                place,
-                language_group,
-                "Under Assessment",
-                record_format,
-                img_path,
-                record_path,
-                date_added,
-            ),
-        )
+        success = add_new_item(dataArray)
 
-        meta_id = next_id("culturalmetadata", "metadataID", "M")
+        if success:
+            flash("Item added successfully.", "success")
+            return redirect(url_for("add_item"))
 
-        execute(
-            """
-            INSERT INTO culturalmetadata
-            (
-                metadataID,
-                itemID,
-                accessLevel
-            )
-            VALUES (%s, %s, %s)
-            """,
-            (
-                meta_id,
-                item_id,
-                "Under Assessment",
-             ),
-         )
-
-        flash("Item added successfully.", "success")
+        flash("Item could not be added.", "danger")
         return redirect(url_for("add_item"))
 
     return render_template("item_add.html", collections=collections, form=form)
