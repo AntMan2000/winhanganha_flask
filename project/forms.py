@@ -78,21 +78,59 @@ class AddItemForm(Form):
     description = TextAreaField("Description", [DataRequired()])
     item_type = SelectField(
         "Item Type",
-        [DataRequired()],
+        validators=[DataRequired()],
         choices=[
             ("", "Select an item type"),
             ("Audio", "Audio"),
             ("Video", "Video"),
             ("Image", "Image"),
             ("Document", "Document"),
+            ("Language Record", "Language Record"),
+            ("Place Record", "Place Record"),
+            ("Oral History", "Oral History"),
+            ("Transcript", "Transcript"),
+            ("Cultural Note", "Cultural Note"),
+            ("Community Record", "Community Record"),
+            ("Collection Record", "Collection Record"),
             ("Other", "Other"),
         ]
     )
+    record_format = SelectField(
+    "Format",
+    validators=[DataRequired()],
+    choices=[
+        ("", "Select a format"),
+        ("Audio recording", "Audio recording"),
+        ("Video recording", "Video recording"),
+        ("Digitised image", "Digitised image"),
+        ("Digitised document", "Digitised document"),
+        ("Digitised text record", "Digitised text record"),
+        ("PDF document", "PDF document"),
+        ("Word document", "Word document"),
+        ("Spreadsheet", "Spreadsheet"),
+        ("Presentation", "Presentation"),
+        ("Audio transcript", "Audio transcript"),
+        ("Video transcript", "Video transcript"),
+        ("Audio transcript and cultural note", "Audio transcript and cultural note"),
+        ("Photograph", "Photograph"),
+        ("Map", "Map"),
+        ("Place name record", "Place name record"),
+        ("Language word list", "Language word list"),
+        ("Community meeting notes", "Community meeting notes"),
+        ("Consultation record", "Consultation record"),
+        ("Cultural access note", "Cultural access note"),
+        ("Archive metadata record", "Archive metadata record"),
+        ("Other format", "Other format"),
+    ]
+)
     place = StringField("Place")
     language_group = TextAreaField("Language Group/Nation")
     file_record = FileField("Item File", [DataRequired()])
     item_img = FileField("Collection Item Image")
-    
+    submit = SubmitField("Submit Item")
+ 
+class CancelUserRequest(Form):
+    cancel = SubmitField("Cancel Request")
     
 
 # class AdminPermissionForm(Form):

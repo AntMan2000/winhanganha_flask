@@ -105,3 +105,35 @@ textarea {
 
  
 }
+
+.assessment-table-small {
+    font-size: 0.82rem;
+}
+
+.assessment-table-small th,
+.assessment-table-small td {
+    padding: 0.35rem 0.45rem;
+    vertical-align: middle;
+}
+
+.assessment-table-small small {
+    font-size: 0.72rem;
+}
+
+.assessment-table-small .badge {
+    font-size: 0.68rem;
+}
+
+.assessment-table-small .btn {
+    font-size: 0.72rem;
+    padding: 0.2rem 0.45rem;
+}
+
+.assessment-table-small img {
+    max-width: 55px !important;
+    max-height: 55px !important;
+}
+
+.max-width-img {
+    max-width: 400px !important;
+}

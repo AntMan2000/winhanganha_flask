@@ -12,9 +12,12 @@
         <a href="{{ url_for('home') }}">Home</a>
       </li>
       <li class="breadcrumb-item">
-        <a href="{{ url_for('items') }}">Archive</a>
+        <a href="{{ url_for('account') }}">Account</a>
       </li>
-      <li class="breadcrumb-item active" aria-current="page">Assessment Portal</li>
+      <li class="breadcrumb-item">
+        <a href="{{ url_for('assessments') }}">Assessment Portal</a>
+      </li>
+      <li class="breadcrumb-item active" aria-current="page">Item Assessment Portal</li>
     </ol>
   </nav>
 </div>
@@ -29,8 +32,8 @@
 
       <div class="card">
         <img 
-          src="{{ url_for('static', filename='img/' ~ assessment.image_filename) }}" 
-          class="card-img-top" 
+          src="{{ url_for('static', filename=assessment.image_filename) }}" 
+          class="card-img-top max-width-img" 
           alt="Placeholder image for item under assessment"
         >
 

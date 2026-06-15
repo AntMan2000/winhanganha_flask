@@ -1,4 +1,4 @@
-from flask_login import UserMixin
+from flask_login import UserMixin, AnonymousUserMixin
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 from project import ALLOWED_EXTENSIONS, ALLOWED_IMG_EXTENSIONS, login_manager, mysql
@@ -27,7 +27,13 @@ class User(UserMixin):
 
     def is_administrator(self):
         return self.can(Permission.ADMINISTRATOR)
-    
+
+class AnonymousUser(AnonymousUserMixin):
+    def can(self, permission):
+        return False
+
+    def is_administrator(self):
+        return False
       
 class Role:
     def __init__(self, name, permissions=Permission.PUBLIC):
@@ -238,7 +244,8 @@ def fetch_item(item_id: str):
                ci.format,
                DATE_FORMAT(ci.dateAdded, '%%d %%M %%Y') AS date_added,
                ci.dateRecorded AS date_recorded,
-               REPLACE(ci.imagePath, 'img/', '') AS image_filename,
+               ci.imagePath AS image_filename,
+               ci.recordPath as recordPath,
                c.collectionName AS collection_name,
                c.description AS collection_description,
                cm.ownership,
@@ -251,6 +258,17 @@ def fetch_item(item_id: str):
         JOIN Collection c ON c.collectionID = ci.collectionID
         JOIN CulturalMetadata cm ON cm.itemID = ci.itemID
         WHERE ci.itemID = %s
+        """,
+        (item_id,),
+    )
+
+def fetch_item_status(item_id: str):
+    return row(
+        """
+        SELECT 
+            status             
+        FROM CollectionItem     
+        WHERE itemID = %s
         """,
         (item_id,),
     )
@@ -272,6 +290,7 @@ def fetch_user_requests(user_id):
         JOIN collectionitem ci ON ar.itemID = ci.itemID
         WHERE
             userID = %s
+            AND requestStatus != 'Cancel'
         ORDER BY requestDate
         """,
         (user_id,),
@@ -295,11 +314,31 @@ def fetch_user_request(user_id, item_id):
         WHERE
             ar.userID = %s
             AND ar.itemID = %s
-        ORDER BY requestDate
+            AND requestStatus != 'Cancel'
         """,
         (user_id,item_id,),
     )
 
+def fetch_user_request_by_ID(user_id, request_id):
+    return row(
+        """
+        SELECT 
+            ar.requestID
+        FROM accessrequest ar
+        WHERE
+            ar.userID = %s
+            AND ar.requestID = %s
+        """,
+        (user_id,request_id,),
+    )
+
+def cancel_user_request(request_id):
+    execute(
+        """
+        UPDATE accessrequest SET requestStatus = 'Cancel' WHERE requestID = %s
+        """, (request_id,),
+    )
+    return True
 
 
 def create_user(preferred_title, name, email, password):

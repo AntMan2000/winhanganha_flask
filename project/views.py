@@ -1,20 +1,24 @@
 from calendar import c
 from datetime import date
 from tkinter import CURRENT
-
 from flask import abort, flash, redirect, render_template, request, session, url_for
 from flask_login import login_required, login_user, logout_user, current_user
 from flask_wtf import file
 from wtforms import form
+from pathlib import Path
+from uuid import uuid4
+from werkzeug.utils import secure_filename
 from project import ALLOWED_EXTENSIONS, ALLOWED_IMG_EXTENSIONS, app
 from project.decorators import permission_required, is_administrator
-from project.forms import LoginForm, MetadataForm, RegistrationForm, AccessRequestForm, AddItemForm
+from project.forms import LoginForm, MetadataForm, RegistrationForm, AccessRequestForm, AddItemForm, CancelUserRequest
 from project.models import (
     User,
+    cancel_user_request,
     create_user,
     execute,
     fetch_collections,
     fetch_item,
+    fetch_item_status,
     fetch_role_by_permission,
     get_user_reviewer,
     load_users,
@@ -24,6 +28,7 @@ from project.models import (
     verify_user_password,
     fetch_user_requests,
     fetch_user_request,
+    fetch_user_request_by_ID,
     fetch_all_roles,
     Role,
     Permission,
@@ -53,7 +58,7 @@ def home():
                ci.title,
                ci.description,
                ci.itemType AS item_type,
-               REPLACE(ci.imagePath, 'img/', '') AS image_filename,
+               ci.imagePath AS image_filename,
                c.collectionName AS collection_name,
                cm.accessLevel AS access_level,
                cm.communityApprovalStatus AS review_status
@@ -89,7 +94,7 @@ def items():
                ci.place,
                ci.languageGroup AS language_group,
                ci.status,
-               REPLACE(ci.imagePath, 'img/', '') AS image_filename,
+               ci.imagePath AS image_filename,
                c.collectionName AS collection_name,
                cm.accessLevel AS access_level,
                cm.communityApprovalStatus AS review_status,
@@ -151,11 +156,19 @@ def items():
 
 
 @app.route("/item/<item_id>", methods=["GET", "POST"])
-def item_detail(item_id: str = "I001"):
+def item_detail(item_id):
     form = AccessRequestForm(request.form)
     item = fetch_item(item_id)
     if item is None:
         abort(404)
+
+    if item["status"] == "Under Assessment":
+        if not current_user.is_authenticated:
+            flash("You must be logged in to view this item.", "warning")
+            return redirect(url_for("login"))
+
+        if not current_user.can(Permission.REVIEWER):
+            abort(403)
 
     requirements = rows(
         """
@@ -204,15 +217,12 @@ def item_detail(item_id: str = "I001"):
     return render_template("item_detail.html", item=item, requirements=requirements, form=form, access_request=request_row)
 
 @app.route("/item-assessments")
+@login_required
+@permission_required(Permission.REVIEWER)
 def assessments():
     assessment_rows = rows(
         """
-        SELECT ar.assessmentID AS assessment_id,
-               ar.assessmentDate AS opened_date,
-               DATE_ADD(ar.assessmentDate, INTERVAL 9 DAY) AS target_decision_date,
-               ar.assessmentOutcome AS final_decision,
-               ar.notes AS decision_reason,
-               ar.notes AS pending_action,
+        SELECT 
                ci.itemID AS item_id,
                ci.title,
                ci.description,
@@ -221,7 +231,7 @@ def assessments():
                ci.languageGroup AS language_group,
                ci.status,
                ci.dateRecorded AS date_recorded,
-               REPLACE(ci.imagePath, 'img/', '') AS image_filename,
+               ci.imagePath AS image_filename,
                c.collectionName AS collection_name,
                cm.accessLevel AS access_level,
                cm.recommendedAccessLevel AS recommended_access_level,
@@ -229,75 +239,74 @@ def assessments():
                cm.communityApprovalStatus AS review_status,
                cm.culturalNotes AS cultural_notes,
                cm.accessConditions AS access_conditions,
-               ci.description AS public_description,
-               u.name AS assigned_reviewers
-        FROM AssessmentRecord ar
-        JOIN CollectionItem ci ON ci.itemID = ar.itemID
+               ci.description AS public_description
+        FROM CollectionItem ci
         JOIN Collection c ON c.collectionID = ci.collectionID
         JOIN CulturalMetadata cm ON cm.itemID = ci.itemID
-        JOIN Reviewer r ON r.reviewerID = ar.reviewerID
-        JOIN Users u ON u.userID = r.userID
         WHERE ci.status = 'Under Assessment'
-        ORDER BY ar.assessmentID
+        ORDER BY ci.itemID
         """
     )
        
     return render_template("item_assessment_list.html", assessments=assessment_rows)
 
 
-@app.route("/item-assessment")
+
+
+
+@app.route("/item-assessment/<item_id>", methods=["GET", "POST"])
+@login_required
+@permission_required(Permission.REVIEWER)
+def assessment_item(item_id):
+
+    assessment_row = fetch_item(item_id)
+    # assessment_row = rows(
+    # """
+    # SELECT 
+    #         ci.itemID AS item_id,
+    #         ci.title,
+    #         ci.description,
+    #         ci.itemType AS item_type,
+    #         ci.place,
+    #         ci.languageGroup AS language_group,
+    #         ci.status,
+    #         ci.dateRecorded AS date_recorded,
+    #         ci.imagePath AS image_filename,
+    #         c.collectionName AS collection_name,
+    #         cm.accessLevel AS access_level,
+    #         cm.recommendedAccessLevel AS recommended_access_level,
+    #         cm.culturalSensitivity AS cultural_sensitivity,
+    #         cm.communityApprovalStatus AS review_status,
+    #         cm.culturalNotes AS cultural_notes,
+    #         cm.accessConditions AS access_conditions,
+    #         ci.description AS public_description
+    # FROM CollectionItem ci
+    # JOIN Collection c ON c.collectionID = ci.collectionID
+    # JOIN CulturalMetadata cm ON cm.itemID = ci.itemID
+    # WHERE ci.status = 'Under Assessment'
+    # ORDER BY ci.itemID
+    # """,(item_id),
+    # )    
+    return render_template("item_assessment.html", assessment=assessment_row)
+
+
+
+
+
+@app.route("/item-assess", methods=["GET", "POST"])
 def assessment():
-    assessment_row = row(
-        """
-        SELECT ar.assessmentID AS assessment_id,
-               ar.assessmentDate AS opened_date,
-               DATE_ADD(ar.assessmentDate, INTERVAL 9 DAY) AS target_decision_date,
-               ar.assessmentOutcome AS final_decision,
-               ar.notes AS decision_reason,
-               ar.notes AS pending_action,
-               ci.itemID AS item_id,
-               ci.title,
-               ci.description,
-               ci.itemType AS item_type,
-               ci.place,
-               ci.languageGroup AS language_group,
-               ci.status,
-               ci.dateRecorded AS date_recorded,
-               REPLACE(ci.imagePath, 'img/', '') AS image_filename,
-               c.collectionName AS collection_name,
-               cm.accessLevel AS access_level,
-               cm.recommendedAccessLevel AS recommended_access_level,
-               cm.culturalSensitivity AS cultural_sensitivity,
-               cm.communityApprovalStatus AS review_status,
-               cm.culturalNotes AS cultural_notes,
-               cm.accessConditions AS access_conditions,
-               ci.description AS public_description,
-               u.name AS assigned_reviewers
-        FROM AssessmentRecord ar
-        JOIN CollectionItem ci ON ci.itemID = ar.itemID
-        JOIN Collection c ON c.collectionID = ci.collectionID
-        JOIN CulturalMetadata cm ON cm.itemID = ci.itemID
-        JOIN Reviewer r ON r.reviewerID = ar.reviewerID
-        JOIN Users u ON u.userID = r.userID
-        WHERE ar.itemID = 'I004'
-        ORDER BY ar.assessmentID
-        LIMIT 1
-        """
-    )
-       
-    return render_template("item_assessment_list.html", assessment=assessment_row)
+    return redirect(url_for("home"))
+
+# @app.route("/item-assessment", methods=["POST"])
+# def update_assessment_metadata():
+#     form = MetadataForm(request.form)
+#     if form.validate():
+#         flash("Assessment metadata saved.", "success")
+#     else:
+#         flash("Assessment metadata could not be saved.", "danger")
+#     return redirect(url_for("assessment"))
 
 
-
-
-@app.route("/item-assessment", methods=["POST"])
-def update_assessment_metadata():
-    form = MetadataForm(request.form)
-    if form.validate():
-        flash("Assessment metadata saved.", "success")
-    else:
-        flash("Assessment metadata could not be saved.", "danger")
-    return redirect(url_for("assessment"))
 
 
 @app.route("/register", methods=["GET", "POST"])
@@ -311,18 +320,6 @@ def register():
 
     return render_template("register.html", form=form)
 
-# def create_user(preferred_title, name, email, password):
-#     password_hash = generate_password_hash(password)
-#     user_id = next_id("Users", "userID", "U")
-#     execute(
-#         """
-#         INSERT INTO Users
-#         (userID, role, preferred_title, name, email, passwordHash)
-#         VALUES (%s, %s, %s, %s, %s, %s)
-#         """,
-#         (user_id, "1", preferred_title, name, email, password_hash),
-#     )
-#     return user_id
 
 
 
@@ -336,17 +333,9 @@ def login():
         user_row = verify_user_password(email, password)        
         if user_row:
             permission = fetch_role_by_permission(user_row["permissions"])
-            #user_row["preferred_title"]
             user = User(user_row["userID"], permission, user_row["preferred_title"], user_row["name"], user_row["email"])
             login_user(user)
-# #class User(UserMixin):
-#     def __init__(self, userID, role, preferred_title, name, email):
-#         self.id = str(userID)
-#         self.userID = userID
-#         self.role = role
-#         self.preferred_title = preferred_title
-#         self.name = name
-#         self.email = email
+
             session["userID"] = user_row["userID"]
             session["role"] = permission
             session["preferred_title"] = user_row["preferred_title"]
@@ -382,8 +371,25 @@ def logout():
 @app.route("/account", methods=["GET", "POST"])
 @login_required
 def account():
+
+    if request.method == "POST":
+        complete = False
+        request_id = request.form.get("requestID")
+        user_request = fetch_user_request_by_ID(current_user.userID,request_id)
+
+        if user_request is None:
+            return None
+
+        complete = cancel_user_request(user_request["requestID"])
+        if complete == True:
+            flash("Request cancelled successfully.", "success")
+            return redirect(url_for("account"))
+        flash("Request cancel failed.", "danger")
+        return redirect(url_for("account"))
+
+    cancel_request_form = CancelUserRequest(request.form)
     request_rows = fetch_user_requests(current_user.id)
-    return render_template("account.html", requests=request_rows)
+    return render_template("account.html", requests=request_rows, form=cancel_request_form)
 
 
 
@@ -419,62 +425,114 @@ def dashboard():
 @permission_required(Permission.ARCHIVIST)
 def add_item():
     form = AddItemForm(request.form)
+
     collections = fetch_collections()
+
     form.collection_id.choices = [("", "Select Collection")]
     form.collection_id.choices += [
         (collection["collection_id"], collection["name"])
         for collection in collections
     ]
-    
+
     if request.method == "POST":
         title = request.form.get("title")
         description = request.form.get("description")
         item_type = request.form.get("item_type")
+        record_format = request.form.get("record_format")
         place = request.form.get("place")
         language_group = request.form.get("language_group")
         collection_id = request.form.get("collection_id")
+
         file_record = request.files.get("file_record")
-        collection_img = request.files.get("collection_img")
-        
-        if collection_img and allowed_file(collection_img.filename, ALLOWED_IMG_EXTENSIONS):
-            img_filename = secure_filename(collection_img.filename)
-            collection_img.save(app.config["UPLOAD_FOLDER"] / img_filename)
-            img_path = f"{app.config['UPLOAD_FOLDER']}/{img_filename}"
-        else:
-            img_path = "img/placeholder.png"   
+        collection_img = request.files.get("item_img")
 
-        if file_record and allowed_file(file_record.filename, ALLOWED_EXTENSIONS):
-            filename = secure_filename(file_record.filename)
-            file_record.save(app.config["UPLOAD_FOLDER"] / filename)
-            recordPath = f"{app.config['UPLOAD_FOLDER']}/{filename}"
-            item_id = next_id("CollectionItem", "itemID", "I")
-            date_added = date.today().strftime("%Y-%m-%d") 
-            execute(
-                """
-                INSERT INTO CollectionItem
-                (itemID, collectionID, title, description, itemType, place, languageGroup, status, imagePath, recordPath, dateAdded)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                """,
-                (
-                    item_id,
-                    collection_id,
-                    title,
-                    description,
-                    item_type,
-                    place,
-                    language_group,
-                    "Under Assessment",
-                    img_path,
-                    recordPath,
-                    date_added,
-                ),
-            )
-            
-            flash("Item added successfully.", "success")
+        date_added = date.today().strftime("%Y-%m-%d")
+        item_id = next_id("CollectionItem", "itemID", "I")
+
+        img_path = "img/placeholder.png"
+        record_path = None
+
+        if collection_img and collection_img.filename:
+            if allowed_file(collection_img.filename, ALLOWED_IMG_EXTENSIONS):
+                original_img_name = secure_filename(collection_img.filename)
+                img_ext = original_img_name.rsplit(".", 1)[1].lower()
+                img_filename = f"{uuid4().hex}.{img_ext}"
+
+                collection_img.save(app.config["UPLOAD_FOLDER"] / img_filename)
+
+                img_path = f"uploads/{img_filename}"
+     
+        if file_record and file_record.filename:
+            if allowed_file(file_record.filename, ALLOWED_EXTENSIONS):
+                original_file_name = secure_filename(file_record.filename)
+                file_ext = original_file_name.rsplit(".", 1)[1].lower()
+                filename = f"{uuid4().hex}.{file_ext}"
+
+                file_record.save(app.config["UPLOAD_FOLDER"] / filename)
+
+                record_path = f"uploads/{filename}"
+            else:
+                flash("Invalid record file type.", "danger")
+                return redirect(url_for("add_item"))
+        else:
+            flash("You must upload a record file.", "danger")
             return redirect(url_for("add_item"))
-        else:
-            flash("Invalid file type.", "danger")
 
+        execute(
+            """
+            INSERT INTO CollectionItem
+            (
+                itemID,
+                collectionID,
+                title,
+                description,
+                itemType,
+                place,
+                languageGroup,
+                status,
+                format,
+                imagePath,
+                recordPath,
+                dateAdded
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """,
+            (
+                item_id,
+                collection_id,
+                title,
+                description,
+                item_type,
+                place,
+                language_group,
+                "Under Assessment",
+                record_format,
+                img_path,
+                record_path,
+                date_added,
+            ),
+        )
 
-    return render_template("item_add.html", collections=collections,form=form)
-#
+        meta_id = next_id("culturalmetadata", "metadataID", "M")
+
+        execute(
+            """
+            INSERT INTO culturalmetadata
+            (
+                metadataID,
+                itemID,
+                accessLevel
+            )
+            VALUES (%s, %s, %s)
+            """,
+            (
+                meta_id,
+                item_id,
+                "Under Assessment",
+             ),
+         )
+
+        flash("Item added successfully.", "success")
+        return redirect(url_for("add_item"))
+
+    return render_template("item_add.html", collections=collections, form=form)

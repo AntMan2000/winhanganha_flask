@@ -5,6 +5,16 @@
 {% block hero_title %}Welcome {{ '' if current_user.preferred_title in ["None","none",""] else current_user.preferred_title }} {{ current_user.name }}{% endblock %}
 
 {% block content %}
+<div class="container">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb bg-light p-3 rounded">
+      <li class="breadcrumb-item">
+        <a href="{{ url_for('home') }}">Home</a>
+      </li>
+      <li class="breadcrumb-item active" aria-current="page">Account</li>
+    </ol>
+  </nav>
+</div>
 <div class="container padb">
 
   <div class="row g-4">
@@ -46,16 +56,51 @@
         <strong>Account note:</strong>
         Restricted item access may require review by authorised staff or community representatives.
       </div>
-          {% if current_user.is_authenticated and current_user.is_administrator() %}
-            <a href="{{ url_for('dashboard') }}" class="btn btn-dark mybutton me-2">
+{% if current_user.is_authenticated %}
+  {% if current_user.is_administrator() or current_user.can(Permission.ARCHIVIST) or current_user.can(Permission.REVIEWER) %}
+
+    <div class="dropdown">
+      <button
+        class="btn btn-dark mybutton dropdown-toggle"
+        type="button"
+        id="staffToolsDropdown"
+        data-bs-toggle="dropdown"
+        aria-expanded="false"
+      >
+        User Tools
+      </button>
+
+      <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="staffToolsDropdown">
+
+        {% if current_user.is_administrator() %}
+          <li>
+            <a class="dropdown-item" href="{{ url_for('dashboard') }}">
               Admin Dashboard
             </a>
-          {% endif %}
-          {% if current_user.is_authenticated and current_user.can(Permission.ARCHIVIST) %}
-            <a href="{{ url_for('add_item') }}" class="btn btn-dark mybutton me-2">
+          </li>
+        {% endif %}
+
+        {% if current_user.can(Permission.ARCHIVIST) %}
+          <li>
+            <a class="dropdown-item" href="{{ url_for('add_item') }}">
               Add Item to Collection
             </a>
-          {% endif %} 
+          </li>
+        {% endif %}
+
+        {% if current_user.can(Permission.REVIEWER) %}
+          <li>
+            <a class="dropdown-item" href="{{ url_for('assessments') }}">
+              Assessment Portal
+            </a>
+          </li>
+        {% endif %}
+
+      </ul>
+    </div>
+
+  {% endif %}
+{% endif %}
     </div>
   </div>
 
@@ -78,11 +123,13 @@
                     <th>Request Date</th>
                     <th>Request Status</th>
                     <th>Purpose</th>
+                    <th></th>
                   </tr>
                 </thead>
 
                 <tbody>
                   {% for request in requests %}
+                  <form method="post">
                   <tr>
                     <td><a href="{{ url_for('item_detail', item_id=request.itemID) }}">{{ request.itemID }}</a></td>
                     <td>{{ request.title }}</td>
@@ -90,7 +137,10 @@
                     <td>{{ request.requestDate }}</td>
                     <td>{{ request_badge(request.requestStatus) }}</td>
                     <td>{{ request.purpose }}</td>
+                    <td>{{ render_field(form.cancel) }}</td>
                   </tr>
+                  <input type="hidden" value="{{request.requestID}}" id="requestID" name="requestID" />
+                  </form>
                   {% endfor %}
                 </tbody>
               </table>

@@ -12,15 +12,19 @@
         <a href="{{ url_for('home') }}">Home</a>
       </li>
       <li class="breadcrumb-item">
-        <a href="{{ url_for('items') }}">Archive</a>
+        <a href="{{ url_for('account') }}">Account</a>
       </li>
-      <li class="breadcrumb-item active" aria-current="page">Add Item</li>
+      <li class="breadcrumb-item active" aria-current="page">Add Item to Archive</li>
     </ol>
   </nav>
 </div>
 
+
 <div class="container padtb">
+<h4>Enter Cultural Item Details below</h4>
+<small class="form-text text-muted">Add basic data here and upload the record. Metadata is entered during the assessment phase.</small>
   <div class="row g-4">
+  <form method="post" enctype="multipart/form-data">
     <div class="col-lg-7">
       <div class="mb-3">
         {{ render_field(form.collection_id) }}
@@ -29,24 +33,36 @@
         {{ render_field(form.title) }}
       </div>
       <div class="mb-3">
+        {{ render_field(form.item_img) }}
+        <small class="form-text text-muted">Image to be displayed in all results (if not included default image is used).</small>
+      </div>
+      <div class="mb-3">
         {{ render_field(form.description) }}
+         <small class="form-text text-muted">No sensitive information should be entered into this field.</small>
+      </div>
+      <div class="mb-3">
+        {{ render_field(form.place) }}
+        <small class="form-text text-muted">Place reference for the Item.</small>
+      </div>
+      <div class="mb-3">
+        {{ render_field(form.language_group) }}
+        <small class="form-text text-muted">Add Language and/or Nation information to identify ownership.</small>
       </div>
       <div class="mb-3">
         {{ render_field(form.item_type) }}
       </div>
       <div class="mb-3">
-        {{ render_field(form.place) }}
-      </div>
-      <div class="mb-3">
-        {{ render_field(form.language_group) }}
+        {{ render_field(form.record_format) }}
       </div>
       <div class="mb-3">
         {{ render_field(form.file_record) }}
+        <small class="form-text text-muted">This file is the actual record, no sensitive information should be entered into any other field.</small>
       </div>
       <div class="mb-3">
-        {{ render_field(form.item_img) }}
+        {{ render_field(form.submit) }}
       </div>
   </div>
+  </form>
 </div>
 <!--
 class AddItemForm(Form):

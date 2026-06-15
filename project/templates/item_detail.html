@@ -27,16 +27,16 @@
   <div class="row g-4">
     <div class="col-lg-7">
       <h2>{{ item.title }}</h2>
-      <p class="lead">{{ item.description }}</p>
+     
 
       <img 
-        src="{{ url_for('static', filename='img/' ~ item.image_filename) }}" 
-        class="img-fluid mb-4" 
+        src="{{ url_for('static', filename=item.image_filename) }}" 
+        class="img-fluid mb-4 max-width-img" 
         alt="Archive item placeholder image"
       >
 
       <h3 class="h4 mt-4">Description</h3>
-      <p>The record includes selected words, meanings, contextual notes and a brief description of appropriate use.</p>
+      <p>{{ item.description }}</p>
 
       <h3 class="h4 mt-4">Cultural Notes</h3>
       <p>{{ item.cultural_notes }}</p>
@@ -89,13 +89,137 @@
           {% endfor %}
         </ul>
       </div>
+      <div class="restricted-panel mt-4">
+        <h3 class="h5">Item File</h3>
+{% if access_request.status == 'Approved' or item.accessLevel == 'Public' or current_user.can(Permission.ARCHIVIST) %}
+{% set record_type = file_type(item.recordPath) %}
+{% set record_url = url_for('static', filename=item.recordPath) %}
+
+<div class="record-preview">
+
+  {% if record_type == "image" %}
+
+    <img
+      src="{{ record_url }}"
+      alt="{{ item.title }}"
+      class="img-fluid rounded border"
+    >
+
+  {% elif record_type == "pdf" %}
+
+    <div class="ratio ratio-4x3 border rounded">
+      <iframe
+        src="{{ record_url }}"
+        title="{{ item.title }}"
+      ></iframe>
+    </div>
+
+    <a
+      href="{{ record_url }}"
+      target="_blank"
+      class="btn btn-sm btn-dark mybutton mt-2"
+    >
+      Open PDF
+    </a>
+
+  {% elif record_type == "video" %}
+
+    <video controls class="w-100 rounded border">
+      <source src="{{ record_url }}">
+      Your browser does not support the video tag.
+    </video>
+
+  {% elif record_type == "audio" %}
+
+    <audio controls class="w-100">
+      <source src="{{ record_url }}">
+      Your browser does not support the audio tag.
+    </audio>
+
+  {% elif record_type == "document" %}
+
+    <div class="file-card border rounded p-3">
+      <span class="badge bg-primary">Document</span>
+      <p class="mt-2 mb-2">{{ item.recordPath }}</p>
+      <a
+        href="{{ record_url }}"
+        target="_blank"
+        class="btn btn-sm btn-dark mybutton"
+      >
+        Open Document
+      </a>
+    </div>
+
+  {% elif record_type == "spreadsheet" %}
+
+    <div class="file-card border rounded p-3">
+      <span class="badge bg-success">Spreadsheet</span>
+      <p class="mt-2 mb-2">{{ item.recordPath }}</p>
+      <a
+        href="{{ record_url }}"
+        target="_blank"
+        class="btn btn-sm btn-dark mybutton"
+      >
+        Open Spreadsheet
+      </a>
+    </div>
+
+  {% elif record_type == "presentation" %}
+
+    <div class="file-card border rounded p-3">
+      <span class="badge bg-warning text-dark">Presentation</span>
+      <p class="mt-2 mb-2">{{ item.recordPath }}</p>
+      <a
+        href="{{ record_url }}"
+        target="_blank"
+        class="btn btn-sm btn-dark mybutton"
+      >
+        Open Presentation
+      </a>
+    </div>
+
+  {% elif record_type == "archive" %}
+
+    <div class="file-card border rounded p-3">
+      <span class="badge bg-secondary">Archive</span>
+      <p class="mt-2 mb-2">{{ item.recordPath }}</p>
+      <a
+        href="{{ record_url }}"
+        class="btn btn-sm btn-dark mybutton"
+        download
+      >
+        Download Archive
+      </a>
+    </div>
+
+  {% else %}
+
+    <div class="file-card border rounded p-3">
+      <span class="badge bg-secondary">File</span>
+      <p class="mt-2 mb-2">{{ item.recordPath }}</p>
+      <a
+        href="{{ record_url }}"
+        target="_blank"
+        class="btn btn-sm btn-dark mybutton"
+      >
+        Open File
+      </a>
+    </div>
+
+  {% endif %}
+
+</div>
+      </div>
+{% else %}
+<p> You do not have access to this record. Request access below.</p>
+{% endif %}
     </div>
   </div>
 </div>
 
 <hr class="my-5">
 
-{% if item.access_level != 'Public' %}
+{% if item.access_level != 'Public' and not current_user.can(Permission.ARCHIVIST) %}
 <div class="container padb">
     <div class="row g-4">
         <div class="col-lg-7">
@@ -138,7 +262,7 @@
                     </div>
                 </div>
 
-            {% elif current_user.is_authenticated %}
+{% elif current_user.is_authenticated %}
             <h2>Request to View This Item</h2>
 
             <p>

@@ -46,6 +46,10 @@
 </div> -->
 
 {% macro render_field(field) %}
+  {% if field.type == "SubmitField" %}
+    {{ field(class="form-control mybutton") }}
+
+  {% else %}
   {{ field.label(class="form-label") }}
 
   {% if field.type == "BooleanField" %}
@@ -53,7 +57,7 @@
   {% else %}
     {{ field(class="form-control") }}
   {% endif %}
-
+  {% endif %}
   {% if field.errors %}
     <div class="text-danger small mt-1">
       {% for error in field.errors %}
