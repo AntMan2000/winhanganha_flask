@@ -10,12 +10,13 @@ from uuid import uuid4
 from werkzeug.utils import secure_filename
 from project import ALLOWED_EXTENSIONS, ALLOWED_IMG_EXTENSIONS, app
 from project.decorators import permission_required, is_administrator
-from project.forms import LoginForm, MetadataForm, RegistrationForm, AccessRequestForm, AddItemForm, CancelUserRequest
+from project.forms import LoginForm, MetadataForm, RegistrationForm, AccessRequestForm, AddItemForm, CancelUserRequest, CommentForm
 from project.models import (
     Permission,
     Role,
     User,
     add_new_item,
+    add_item_comment,
     allowed_file,
     cancel_user_request,
     create_user,
@@ -23,10 +24,12 @@ from project.models import (
     fetch_access_level_filters,
     fetch_all_roles,
     fetch_collections,
+    fetch_item_comments,
     fetch_filtered_items,
     fetch_item,
-    fetch_item_status,
+    fetch_item_status,    
     fetch_item_type_filters,
+    update_meta_data,
     fetch_review_status_filters,
     fetch_role_by_permission,
     fetch_user_request,
@@ -108,8 +111,6 @@ def item_detail(item_id):
         if not current_user.can(Permission.REVIEWER):
             abort(403)
 
-    requirements = get_item_metadata(item_id)
-
     request_row = None
 
     if current_user.is_authenticated:
@@ -121,7 +122,7 @@ def item_detail(item_id):
             flash("You must be logged in to request access.", "warning")
             return redirect(url_for("login"))
         
-        request_array["request_id"] = next_id("accessrequest", "requestID", "Q")
+       
         purpose = form.purpose.data.strip()
         details = form.details.data.strip()
         request_array["full_purpose"] = purpose if not details else f"{purpose}: {details}"
@@ -129,10 +130,14 @@ def item_detail(item_id):
 
         success = submit_access_request(request_array)
         
-        flash("Your request has been received. You will be notified of the request outcome", "success")
-        return redirect(url_for("item_detail", item_id=item_id))
+        if success:
+            flash("Your request has been received. You will be notified of the request outcome", "success")
+            return redirect(url_for("item_detail", item_id=item_id))
+        else:
+            flash("Your request failed, please try again", "warning")
+            return redirect(url_for("item_detail", item_id=item_id))
     
-    return render_template("item_detail.html", item=item, requirements=requirements, form=form, access_request=request_row)
+    return render_template("item_detail.html", item=item, form=form, access_request=request_row)
 
 
 @app.route("/item-assessments")
@@ -151,11 +156,55 @@ def assessments():
 @login_required
 @permission_required(Permission.REVIEWER)
 def assessment_item(item_id):
+    assessment_row = fetch_item(item_id)
 
-    assessment_row = fetch_item(item_id) 
-    return render_template("item_assessment.html", assessment=assessment_row)
+    if assessment_row is None:
+        abort(404)
 
+    if request.method == "POST":
+        form_name = request.form.get("form_name")
 
+        if form_name == "metadata_form":
+            assessment_form = MetadataForm(request.form)
+
+            if assessment_form.validate():
+                update_meta_data(assessment_form, item_id)
+                return redirect(url_for("assessment_item", item_id=item_id))
+
+        elif form_name == "comment_form":
+            comment_text = request.form.get("comment_text", "").strip()
+
+            if comment_text:
+                add_item_comment(
+                    item_id=item_id,                    
+                    comment_text=comment_text,
+                    user=current_user.userID,
+                    date_added = date.today().strftime("%Y-%m-%d")
+                )
+
+            return redirect(url_for("assessment_item", item_id=item_id))
+
+    assessment_form = MetadataForm(data={
+        "title": assessment_row["title"],
+        "description": assessment_row["description"],
+        "access_level": assessment_row["access_level"],
+        "cultural_sensitivity": assessment_row["cultural_sensitivity"],
+        "approval_status": assessment_row["status"],
+        "cultural_notes": assessment_row["cultural_notes"],
+        "access_conditions": assessment_row["access_conditions"],
+        "ownership": assessment_row["ownership"],
+        "item_handling": assessment_row["item_handling"],
+    })
+
+    comments = fetch_item_comments(item_id)
+    comment_form = CommentForm()
+    return render_template(
+        "item_assessment.html",
+        assessment=assessment_row,
+        notes=comments,
+        form=assessment_form,
+        comment_form=comment_form
+    )
 
 
 
@@ -286,13 +335,12 @@ def add_item():
         dataArray["place"] = request.form.get("place")
         dataArray["language_group"] = request.form.get("language_group")
         dataArray["collection_id"] = request.form.get("collection_id")
+        dataArray["date_recorded"] = form.date_recorded.data.strftime("%Y-%m-%d")
 
         file_record = request.files.get("file_record")
         collection_img = request.files.get("item_img")
 
         dataArray["date_added"] = date.today().strftime("%Y-%m-%d")
-        dataArray["item_id"] = next_id("CollectionItem", "itemID", "I")
-        dataArray["meta_id"] = next_id("culturalmetadata", "metadataID", "M")
 
         dataArray["img_path"] = "img/placeholder.png"
         dataArray["record_path"] = None

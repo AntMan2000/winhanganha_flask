@@ -1,7 +1,6 @@
 {% extends "base.html" %}
-{% from "_helpers.html" import access_badge %}
-
-{% block title %}Item Assessment Portal | First Nations Winhanganha Archive{% endblock %}
+{% from "_helpers.html" import access_badge, render_field %}
+{% block title %}{{ assessment.title }} | Item Assessment Portal{% endblock %}
 {% block hero_title %}Item Assessment Portal{% endblock %}
 
 {% block content %}
@@ -17,162 +16,345 @@
       <li class="breadcrumb-item">
         <a href="{{ url_for('assessments') }}">Assessment Portal</a>
       </li>
-      <li class="breadcrumb-item active" aria-current="page">Item Assessment Portal</li>
+      <li class="breadcrumb-item active" aria-current="page">{{ assessment.title }}</li>
     </ol>
   </nav>
 </div>
 
-<hr class="my-5">
-
-<div class="container padb">
+<div class="container padtb">
+  
   <div class="row g-4">
+    <a href="{{ url_for('assessments') }}" class="btn btn-outline-dark mybutton mt-2">Assessment Portal</a>
     <div class="col-lg-7">
-      <h2>Item Under Assessment</h2>
-      <p>This page represents the internal assessment workflow for authorised Elders, community representatives and archive staff.</p>
+      <h2>{{ assessment.title }}</h2>
+      <p>Internal assessment workflow for authorised Elders, community representatives and archive staff.</p>
 
-      <div class="card">
-        <img 
-          src="{{ url_for('static', filename=assessment.image_filename) }}" 
-          class="card-img-top max-width-img" 
-          alt="Placeholder image for item under assessment"
+      {% if assessment.image_filename %}
+        <img
+          src="{{ url_for('static', filename=assessment.image_filename) }}"
+          class="img-fluid mb-4 max-width-img"
+          alt="Archive item image"
         >
+      {% endif %}
 
-        <div class="card-body">
-          <h3 class="h4 card-title">{{ assessment.title }}</h3>
-          <p class="card-text">{{ assessment.description }}</p>
+      <h3 class="h4 mt-4">Description</h3>
+      <p>{{ assessment.description }}</p>
 
-          <ul class="metadata-list">
-            <li><strong>Item ID:</strong> {{ assessment.item_id }}</li>
-            <li><strong>Collection:</strong> {{ assessment.collection_name }}</li>
-            <li><strong>Item type:</strong> {{ assessment.item_type }}</li>
-            <li><strong>Language group:</strong> {{ assessment.language_group }}</li>
-            <li><strong>Place:</strong> {{ assessment.place }}</li>
-            <li><strong>Date recorded:</strong> {{ assessment.date_recorded }}</li>
-            <li><strong>Current access:</strong> {{ access_badge(assessment.access_level) }}</li>
-            <li><strong>Current review status:</strong> {{ assessment.review_status }}</li>
-            <li>
-              <strong>Sensitivity level:</strong>
-              <span class="badge bg-danger">{{ assessment.cultural_sensitivity }} cultural sensitivity</span>
-            </li>
-          </ul>
+      <h3 class="h4 mt-4">Cultural Notes</h3>
+      <p>{{ assessment.cultural_notes }}</p>
 
-          <a href="{{ url_for('item_detail', item_id=assessment.item_id) }}" class="btn btn-dark mybutton me-2 mt-2">
-            Open public item view
-          </a>
-          <a href="{{ url_for('items') }}" class="btn btn-outline-dark mybutton mt-2">
-            Return to archive list
-          </a>
-        </div>
-      </div>
+      <h3 class="h4 mt-4">Access Conditions</h3>
+      <p>{{ assessment.access_conditions }}</p>
+
+   
     </div>
 
     <div class="col-lg-5">
-      <h2>Assessment Summary</h2>
-
       <div class="restricted-panel">
-        <p>
-          <span class="assessment-label">Assigned reviewers:</span><br>
-          {{ assessment.assigned_reviewers }}
-        </p>
-        <p>
-          <span class="assessment-label">Assessment opened:</span><br>
-          {{ assessment.opened_date }}
-        </p>
-        <p>
-          <span class="assessment-label">Target decision date:</span><br>
-          {{ assessment.target_decision_date }}
-        </p>
-        <p>
-          <span class="assessment-label">Pending action:</span><br>
-          {{ assessment.pending_action }}
-        </p>
+        <h3 class="h5">Item Metadata</h3>
+        <a href="{{ url_for('item_detail', item_id=assessment.item_id) }}" class="btn btn-outline-dark mybutton">View item as Public</a>
+        <ul class="metadata-list">
+          <li><strong>Item ID:</strong> {{ assessment.item_id }}</li>
+          <li><strong>Collection:</strong> {{ assessment.collection_name }}</li>
+          <li><strong>Item type:</strong> {{ assessment.item_type }}</li>
+
+          {% if assessment.language_group %}
+            <li><strong>Language group:</strong> {{ assessment.language_group }}</li>
+          {% endif %}
+
+          {% if assessment.place %}
+            <li><strong>Place:</strong> {{ assessment.place }}</li>
+          {% endif %}
+
+          {% if assessment.status %}
+            <li><strong>Status:</strong> {{ assessment.status }}</li>
+          {% elif assessment.review_status %}
+            <li><strong>Status:</strong> {{ assessment.review_status }}</li>
+          {% endif %}
+
+          <li><strong>Access level:</strong> {{ access_badge(assessment.access_level) }}</li>
+
+          {% if assessment.cultural_sensitivity %}
+            <li><strong>Cultural sensitivity:</strong> {{ assessment.cultural_sensitivity }}</li>
+          {% endif %}
+
+          {% if assessment.ownership %}
+            <li><strong>Ownership:</strong> {{ assessment.ownership }}</li>
+          {% endif %}
+
+          {% if assessment.community_approval %}
+            <li><strong>Community approval:</strong> {{ assessment.community_approval }}</li>
+          {% endif %}
+
+          {% if assessment.format %}
+            <li><strong>Format:</strong> {{ assessment.format }}</li>
+          {% endif %}
+
+          {% if assessment.date_added %}
+            <li><strong>Date added:</strong> {{ assessment.date_added }}</li>
+          {% endif %}
+
+          {% if assessment.date_recorded %}
+            <li><strong>Date recorded:</strong> {{ assessment.date_recorded }}</li>
+          {% endif %}
+        </ul>
+      </div>
+
+      <div class="restricted-panel mt-4">
+        <h3 class="h5">Sensitivity level:</h3>
+        {% if assessment.cultural_sensitivity %}
+          <span class="badge bg-danger">{{ assessment.cultural_sensitivity }} cultural sensitivity</span>
+        {% else %}
+          <span class="badge bg-secondary">Not yet assessed</span>
+        {% endif %}
+
+        <h3 class="h5 mt-3">Handling Requirements:</h3>
+        {% if assessment.item_handling %}
+          <p>{{ assessment.item_handling }}</p>
+        {% else %}
+          <p>No handling requirements recorded.</p>
+        {% endif %}
+      </div>
+
+      <div class="restricted-panel mt-4">
+        <h3 class="h5">Item File</h3>
+
+        {% if assessment.recordPath %}
+          {% set record_type = file_type(assessment.recordPath) %}
+          {% set record_url = url_for('static', filename=assessment.recordPath) %}
+
+          <div class="record-preview">
+            {% if record_type == "image" %}
+              <img
+                src="{{ record_url }}"
+                alt="{{ assessment.title }}"
+                class="img-fluid rounded border"
+              >
+
+            {% elif record_type == "pdf" %}
+              <div class="ratio ratio-4x3 border rounded">
+                <iframe
+                  src="{{ record_url }}"
+                  title="{{ assessment.title }}"
+                ></iframe>
+              </div>
+
+              <a
+                href="{{ record_url }}"
+                target="_blank"
+                class="btn btn-sm btn-dark mybutton mt-2"
+              >
+                Open PDF
+              </a>
+
+            {% elif record_type == "video" %}
+              <video controls class="w-100 rounded border">
+                <source src="{{ record_url }}">
+                Your browser does not support the video tag.
+              </video>
+
+            {% elif record_type == "audio" %}
+              <audio controls class="w-100">
+                <source src="{{ record_url }}">
+                Your browser does not support the audio tag.
+              </audio>
+
+            {% elif record_type == "document" %}
+              <div class="file-card border rounded p-3">
+                <span class="badge bg-primary">Document</span>
+                <p class="mt-2 mb-2">{{ assessment.title }}</p>
+                <a
+                  href="{{ record_url }}"
+                  target="_blank"
+                  class="btn btn-sm btn-dark mybutton"
+                >
+                  Open Document
+                </a>
+              </div>
+
+            {% elif record_type == "spreadsheet" %}
+              <div class="file-card border rounded p-3">
+                <span class="badge bg-success">Spreadsheet</span>
+                <p class="mt-2 mb-2">{{ assessment.title }}</p>
+                <a
+                  href="{{ record_url }}"
+                  target="_blank"
+                  class="btn btn-sm btn-dark mybutton"
+                >
+                  Open Spreadsheet
+                </a>
+              </div>
+
+            {% elif record_type == "presentation" %}
+              <div class="file-card border rounded p-3">
+                <span class="badge bg-warning text-dark">Presentation</span>
+                <p class="mt-2 mb-2">{{ assessment.title }}</p>
+                <a
+                  href="{{ record_url }}"
+                  target="_blank"
+                  class="btn btn-sm btn-dark mybutton"
+                >
+                  Open Presentation
+                </a>
+              </div>
+
+            {% elif record_type == "archive" %}
+              <div class="file-card border rounded p-3">
+                <span class="badge bg-secondary">Archive</span>
+                <p class="mt-2 mb-2">{{ assessment.title }}</p>
+                <a
+                  href="{{ record_url }}"
+                  class="btn btn-sm btn-dark mybutton"
+                  download
+                >
+                  Download Archive
+                </a>
+              </div>
+
+            {% else %}
+              <div class="file-card border rounded p-3">
+                <span class="badge bg-secondary">File</span>
+                <p class="mt-2 mb-2">{{ assessment.title }}</p>
+                <a
+                  href="{{ record_url }}"
+                  target="_blank"
+                  class="btn btn-sm btn-dark mybutton"
+                >
+                  Open File
+                </a>
+              </div>
+            {% endif %}
+          </div>
+        {% else %}
+          <p>No file has been uploaded for this item.</p>
+        {% endif %}
       </div>
     </div>
   </div>
 </div>
 
-{% include "metadata_form.html" %}
+<hr class="my-5">
+
+<div class="container padb">
+  <h2>Item Assessment Data</h2>
+  <p>Reviewers update this section to define cultural access conditions before the item is released or restricted.</p>
+
+<form action="" method="POST">
+  <div class="row g-3">
+
+    <div class="mb-3 mt-3">
+       {{ render_field(form.title) }}
+    </div>
+    <div class="mb-3 mt-3">
+       {{ render_field(form.description) }}
+    </div>
+
+    <div class="col-md-3">
+       {{ render_field(form.access_level) }}
+    </div>
+
+    <div class="col-md-3">
+      {{ render_field(form.cultural_sensitivity) }}
+    </div>
+
+    <div class="col-md-3">
+      {{ render_field(form.ownership) }}
+    </div>
+    
+    <div class="col-md-3">
+      {{ render_field(form.approval_status) }}
+    </div>
+
+  </div>
+
+  <div class="mb-3 mt-3">
+    {{ render_field(form.cultural_notes) }}
+  </div>
+
+  <div class="mb-3">
+    {{ render_field(form.access_conditions) }}
+  </div>
+
+  <div class="mb-3">
+    {{ render_field(form.item_handling) }}
+  </div>
+
+  {{ render_field(form.submit) }}
+</form>
+ 
+</div>
 
 <hr class="my-5">
 
 <div class="container padb">
   <div class="row g-4">
-    <div class="col-lg-7">
+    <div class="col-lg-12">
       <h2>Reviewer Discussion</h2>
       <p>Discussion notes record the review process and support accountable access decisions.</p>
+      <form method="POST">
+        {{ comment_form.form_name }}
 
-      {% for note in notes %}
-      <div class="discussion-note">
-        <p>
-          <strong>{{ note.reviewer_name }}</strong>
-          <span class="text-muted">{{ note.note_date }}</span>
-        </p>
-        <p>{{ note.note_text }}</p>
-      </div>
-      {% endfor %}
-
-      <form>
         <div class="mb-3">
-          <label for="newDiscussionNote" class="form-label">Add discussion note</label>
-          <textarea 
-            class="form-control" 
-            id="newDiscussionNote" 
+          {{ comment_form.comment_text.label(class="form-label") }}
+          {{ comment_form.comment_text(
+            class="form-control",
+            rows="3",
             placeholder="Enter review note..."
-          ></textarea>
+          ) }}
         </div>
 
-        <button type="button" class="btn btn-dark mybutton addDiscussionNote">
-          Add note
-        </button>
+        {{ comment_form.submit(class="btn btn-dark mybutton") }}
       </form>
-    </div>
 
-    <div class="col-lg-5">
-      <h2>Final Decision</h2>
+   <div class="card border-0 shadow-sm mb-4">
+  <div class="card-header bg-white border-bottom">
+    <h5 class="mb-0">Discussion Notes</h5>
+  </div>
 
-      <div class="decision-box">
-        <p>This decision area would be completed by the authorised review group after consultation.</p>
+  <div class="card-body">
+    {% if notes %}
+      <div class="vstack gap-3">
 
-        <form>
-          <div class="mb-3">
-            <label for="finalDecision" class="form-label">Decision outcome</label>
-            <select class="form-select" id="finalDecision">
-              {% for option in ['Decision pending', 'Release publicly', 'Release with restricted access', 'Keep private', 'Return for further consultation'] %}
-                <option {% if option == assessment.final_decision %}selected{% endif %}>
-                  {{ option }}
-                </option>
-              {% endfor %}
-            </select>
+        {% for note in notes %}
+          <div class="border rounded-3 p-3 bg-light">
+            <div class="d-flex justify-content-between align-items-start gap-3 mb-2">
+              <div>
+                <div class="fw-semibold">
+                  {{ '' if note.preferred_title in ["None","none",""," "] else note.preferred_title  }} {{ note.name }} | role: {{ note.role_name }}
+                </div>
+                <small class="text-muted">Comment</small>
+              </div>
+
+              <small class="text-muted text-nowrap">
+                {{ note.commentDate }}
+              </small>
+            </div>
+
+            <p class="mb-0">
+              {{ note.commentText }}
+            </p>
           </div>
+        {% endfor %}
 
-          <div class="mb-3">
-            <label for="decisionReason" class="form-label">Decision reason</label>
-            <textarea class="form-control" id="decisionReason">{{ assessment.decision_reason }}</textarea>
-          </div>
-
-          <div class="mb-3">
-            <label for="reviewerSignature" class="form-label">Reviewer confirmation</label>
-            <input 
-              type="text" 
-              class="form-control" 
-              id="reviewerSignature" 
-              placeholder="Reviewer name"
-            >
-          </div>
-
-          <button type="button" class="btn btn-dark mybutton">
-            Record final decision
-          </button>
-        </form>
       </div>
-    </div>
+    {% else %}
+      <p class="text-muted mb-0">
+        No discussion notes have been recorded.
+      </p>
+    {% endif %}
+  </div>
+</div>
+
+   </div>
+
+
   </div>
 </div>
 
 <div class="container padb">
   <div class="alert alert-secondary" role="alert">
     <strong>Cultural access note:</strong>
-    Assessment information is prototype content for educational purposes. A real system would require secure login, audit records and formal community governance approval.
+    Assessment information is for authorised review use only. Review decisions should follow approved community governance, cultural authority and access control processes.
   </div>
 </div>
 {% endblock %}

@@ -272,7 +272,8 @@ def fetch_item(item_id: str):
                cm.culturalSensitivity AS cultural_sensitivity,
                cm.culturalNotes AS cultural_notes,
                cm.accessConditions AS access_conditions,
-               cm.communityApprovalStatus AS community_approval
+               cm.communityApprovalStatus AS community_approval,
+               cm.itemHandling AS item_handling
         FROM CollectionItem ci
         JOIN Collection c ON c.collectionID = ci.collectionID
         JOIN CulturalMetadata cm ON cm.itemID = ci.itemID
@@ -472,7 +473,11 @@ def update_user_permissions(user_id,role):
  
 
 def add_new_item(array):
-     item_insert = execute(
+    
+    array["item_id"] = next_id("CollectionItem", "itemID", "I")
+    array["meta_id"] = next_id("culturalmetadata", "metadataID", "M")
+    
+    item_insert = execute(
             """
             INSERT INTO CollectionItem
             (
@@ -487,9 +492,10 @@ def add_new_item(array):
                 format,
                 imagePath,
                 recordPath,
-                dateAdded
+                dateAdded,
+                dateRecorded
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """,
             (
                 array["item_id"],
@@ -504,27 +510,32 @@ def add_new_item(array):
                 array["img_path"],
                 array["record_path"],
                 array["date_added"],
+                array["date_recorded"],
             ),
         )
 
-     meta_insert = execute(
+    meta_insert = execute(
             """
             INSERT INTO culturalmetadata
             (
                 metadataID,
                 itemID,
-                accessLevel
+                accessLevel,
+                culturalSensitivity,
+                communityApprovalStatus
             )
-            VALUES (%s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s)
             """,
             (
                 array["meta_id"],
                 array["item_id"],
                 "Under Assessment",
+                "Not yet assessed",
+                "Under Assessment"
              ),
          )
 
-     return item_insert == 1 and meta_insert == 1
+    return item_insert == 1 and meta_insert == 1
 
 def get_assessment_rows():
 
@@ -547,7 +558,7 @@ def get_assessment_rows():
                cm.communityApprovalStatus AS review_status,
                cm.culturalNotes AS cultural_notes,
                cm.accessConditions AS access_conditions,
-               ci.description AS public_description
+               cm.itemHandling AS item_handling
         FROM CollectionItem ci
         JOIN Collection c ON c.collectionID = ci.collectionID
         JOIN CulturalMetadata cm ON cm.itemID = ci.itemID
@@ -583,8 +594,7 @@ def get_featured_items():
 def get_item_metadata(item_id):
     requirements = rows(
         """
-        SELECT metadataID AS requirement_id,
-               culturalNotes AS requirement_text
+        SELECT *
         FROM CulturalMetadata
         WHERE itemID = %s
         """,
@@ -595,6 +605,9 @@ def get_item_metadata(item_id):
 
 
 def submit_access_request(request_array):
+    
+    request_array["request_id"] = next_id("accessrequest", "requestID", "Q")
+    
     execute(
             """
             INSERT INTO accessrequest
@@ -707,3 +720,105 @@ def fetch_review_status_filters():
         ORDER BY communityApprovalStatus
         """
     )
+    
+def update_meta_data(form, item_id):
+    
+    if form.access_level.data == "Under Assessment":
+        communityApproval = "Under Assessment"
+    else:
+        communityApproval = "Approved"
+        
+    execute(
+        """
+        UPDATE culturalmetadata
+        SET accessLevel = %s,
+            culturalSensitivity = %s,
+            ownership = %s,
+            culturalNotes = %s,
+            accessConditions = %s,
+            itemHandling = %s,
+            communityApprovalStatus = %s
+        WHERE 
+            itemID = %s
+        """,
+        (
+            form.access_level.data,
+            form.cultural_sensitivity.data,
+            form.ownership.data,
+            form.cultural_notes.data,
+            form.access_conditions.data,
+            form.item_handling.data,
+            communityApproval,
+            item_id,
+        ),
+    )
+    
+    execute(
+        """
+        UPDATE collectionitem
+        SET 
+            status = %s,
+            title = %s,
+            description = %s
+        WHERE 
+            itemID = %s
+        """,
+        (
+            form.approval_status.data,
+            form.title.data,
+            form.description.data,
+            item_id
+        ),        
+    )
+    
+def fetch_item_comments(item_id):
+    
+    comments = rows(
+    """
+    SELECT
+        ac.commentID,
+        ac.commentText,
+        ac.commentDate,
+        CASE
+            WHEN u.preferred_title IS NULL THEN ''
+            WHEN u.preferred_title = '' THEN ''
+            WHEN LOWER(u.preferred_title) = 'none' THEN ''
+            ELSE u.preferred_title
+        END AS preferred_title,
+        u.name,
+        r.name AS 'role_name'
+    FROM
+        assessmentcomment ac
+        JOIN users u ON u.userID = ac.userID
+        JOIN roles r ON u.permissions = r.permissions
+    WHERE 
+        ac.itemID = %s
+    ORDER BY
+        ac.commentID DESC, ac.commentDate
+    
+    """,(item_id,),
+    )
+    
+    return comments
+
+
+def add_item_comment(item_id,comment_text,user,date_added):
+    comment_id = next_id("assessmentcomment", "commentID", "AC")
+    
+    comment_insert = execute(
+        """
+        INSERT INTO 
+            assessmentcomment
+            (commentID, itemID, userID, commentText, commentDate)
+            VALUES
+            (%s,%s,%s,%s,%s)        
+        """,(
+            comment_id,
+            item_id,
+            user,
+            comment_text,
+            date_added            
+        ),
+    )
+    
+    return comment_insert == 1
