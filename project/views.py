@@ -126,7 +126,8 @@ def item_detail(item_id):
         purpose = form.purpose.data.strip()
         details = form.details.data.strip()
         request_array["full_purpose"] = purpose if not details else f"{purpose}: {details}"
-
+        request_array["current_user"] = current_user.userID
+        request_array["request_date"] = date.today().isoformat()
 
         success = submit_access_request(request_array)
         

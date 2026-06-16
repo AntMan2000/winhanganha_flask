@@ -617,8 +617,8 @@ def submit_access_request(request_array):
             (
                 request_array["request_id"],
                 request_array["item_id"],
-                current_user.userID,
-                date.today().isoformat(),
+                request_array["current_user"],
+                request_array["request_date"],
                 "Pending",
                 request_array["full_purpose"],
             ),
