@@ -78,7 +78,8 @@ def items():
         "review_status": request.args.get("review_status", "").strip(),
     }
 
-    item_rows = fetch_filtered_items(filters)
+    user_id = current_user.userID if current_user.is_authenticated else None
+    item_rows = fetch_filtered_items(filters, user_id)
 
     return render_template(
         "items.html",

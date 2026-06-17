@@ -688,9 +688,10 @@ def submit_access_request(request_array):
     return request_insert == 1
 
 
-def fetch_filtered_items(filters):
+def fetch_filtered_items(filters, user_id=None):
     sql = """
-        SELECT ci.itemID AS item_id,
+        SELECT 
+               ci.itemID AS item_id,
                ci.title,
                ci.description,
                ci.itemType AS item_type,
@@ -701,14 +702,21 @@ def fetch_filtered_items(filters):
                c.collectionName AS collection_name,
                cm.accessLevel AS access_level,
                cm.communityApprovalStatus AS review_status,
-               cm.culturalSensitivity AS cultural_sensitivity
+               cm.culturalSensitivity AS cultural_sensitivity,
+               ar.requestStatus AS request_status
         FROM CollectionItem ci
         JOIN Collection c ON c.collectionID = ci.collectionID
         JOIN CulturalMetadata cm ON cm.itemID = ci.itemID
-        WHERE ci.status != 'Under Assessment' AND ci.status != 'Remove'
+        LEFT JOIN accessrequest ar
+            ON ar.itemID = ci.itemID
+            AND ar.userID = %s
+            AND ar.requestStatus != 'Cancel'
+        WHERE 
+            ci.status != 'Under Assessment'
+            AND ci.status != 'Remove'
     """
 
-    params = []
+    params = [user_id]
 
     search = filters.get("search")
     collection = filters.get("collection")
