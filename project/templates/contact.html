@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Contact - First Nations Winhanganha Archive{% endblock %}
+
+{% block hero_title %}Contact Us{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div Class="row">
+
+        <!--contact form-->
+        <div class="col-lg-7 mb-5">
+            <h2 class="mb-4">Send us a message</h2>
+            <p class="mb-4">Use this form to get in touch with the archive team. We aim to respond within five business days.</p>
+
+            <form method="POST" action="{{url_for('contact')}}" novalidate>
+                {{ form.hidden_tag() }}
+
+                <div class="mb-3">
+                    {{form.name.label(class="form-label")}}
+                    {{form.name(class="form-control" + ("is-invalid" if form.name.errors else ""), placeholder="Your full name")}}
+                    {% for error in form.name.errors %}
+                    <div class="invalid-feedback">{{error}}</div>
+                    {% endfor %}
+                </div>
+
+                <div class="mb-3">
+                    {{form.name.label(class="form-label")}}
+                    {{form.name(class="form-control" + ("is-invalid" if form.name.errors else ""), placeholder="your@email.com")}}
+                    {% for error in form.email.errors %}
+                    <div class="invalid-feedback">{{error}}</div>
+                    {% endfor %}
+                </div>
+
+                <div class="mb-3">
+                    {{form.name.label(class="form-label")}}
+                    {{form.name(class="form-control" + ("is-invalid" if form.name.errors else ""), placeholder="What is your message about")}}
+                    {% for error in form.email.errors %}
+                    <div class="invalid-feedback">{{error}}</div>
+                    {% endfor %}
+                </div>
+
+                <div class="mb-3">
+                    {{form.name.label(class="form-label")}}
+                    {{form.name(class="form-control" + ("is-invalid" if form.name.errors else ""), placeholder="Your message here...")}}
+                    {% for error in form.email.errors %}
+                    <div class="invalid-feedback">{{error}}</div>
+                    {% endfor %}
+                </div>
+
+                <button type="submit" class="btn btn-dark mybutton">Send message</button>
+            </form>
+        </div>
+
+        <!--Contact Info-->
+        <div class="col-lg-4 offset-lg-1 mb-5">
+            <h2 class="mb-4">Other ways to reach us</h2>
+
+            <div class="mb-4">
+                <h6 class="text-muted text-uppercase">General enquires</h6>
+                <p>archive@winhanganha.org.au</p>
+            </div>
+
+            <div class="mb-4">
+                <h6 class="text-muted text-uppercase">Cultural protocols and access requests</h6>
+                <p>For questions about access to restricted items or cultural protocols, please email us directly and we will route your enquiry to the appropriate community representative.</p>
+            </div>
+
+            <div class="mb-4">
+                <h6 class="text-muted text-uppercase">Location</h6>
+                <p>
+                    First Nations Winhanganha<br>
+                    Queensland, Australia
+                </p>
+            </div>
+
+            <div class="alert alert-warning" role="alert">
+                <strong>Please note:</strong> This archive is managed in partnership with Indigenous communities. Some enquiries may be referred to community elders or authorised delegates before a response can be provided. 
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

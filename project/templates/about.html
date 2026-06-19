@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}About - First Nations Winhanganha Archive{% endblock %}
+
+{%block hero_title%}About the Archive{% endblock %}
+
+{%block content %}
+<div class="container my-5">
+
+    <!--About section-->
+    <div class="row my-5">
+        <div class="col-lg-8 mx-auto">
+            <h2 class="mb-4">Who we are</h2>
+            <p class="lead">
+                The First Nations Winhanganha Archive is a digital preservation initiative developed in partnership with Indigenous communities, academics and library professionals across Australia. 
+            </p>
+            <p>
+                Our mission is to digitise, ethically manage and provide access to Indigenous cultural materials — while ensuring that Indigenous communities retain full sovereignty over their knowledge, stories and heritage. 
+            </p>
+            <p>
+                All materials in this archive remain connected to the communities, families and knowledge holders from which they come. Access is managed in accordance with community-defined cultural protocols.
+            </p>
+        </div>
+    </div>
+    <hr class="featurette-divider">
+
+    <!--CARE Principles-->
+    <div class="row my-5">
+        <div class="col-lg-8 mx-auto">
+            <h2 class="mb-4">Our guiding principles</h2>
+            <p>This archive is designed in accordance with the <strong>CARE Principles for Indigenous Data Governance</strong> (Global Indigenous Data Alliance, 2019).</p>
+
+            <div class="row g-4 mt-2">
+                <div class="col-md-6">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title">Collective benefit</h5>
+                            <p class="card-text">Data ecosystems must enable Indigenous peoples to benefit from the data and knowledge generated from and about their communities.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title">Authority to control</h5>
+                            <p class="card-text">Indigenous peoples' rights and interests in Indigenous data must be recognised, and their authority to control such data must be upheld.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title">Responsibility</h5>
+                            <p class="card-text">Those working with Indigenous data have a responsibility to share how those data are used to support Indigenous peoples' self-determination and collective benefit.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title">Ethics</h5>
+                            <p class="card-text">Indigenous peoples' rights and wellbeing should be the primary concern at all stages of the data life cycle and across the data ecosystem.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <hr class="featurette-divider">
+
+    <!--Partners-->
+    <div class="row my-5">
+        <div class="col-lg-8 mx-auto">
+            <h2 class="mb-4">Our partners</h2>
+            <p>This initiative was developed in collaboration with Indigenous community elders, authorised delegates, community reviewers and library staff. We are grateful to all who have contributed their knowledge and guidance to this project.</p>
+            <p>If your community or organisation would like to be involved, please <a href="{{ url_for('contact') }}">get in touch</a>.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
