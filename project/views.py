@@ -10,7 +10,7 @@ from uuid import uuid4
 from werkzeug.utils import secure_filename
 from project import ALLOWED_EXTENSIONS, ALLOWED_IMG_EXTENSIONS, app
 from project.decorators import permission_required, is_administrator
-from project.forms import LoginForm, MetadataForm, RegistrationForm, AccessRequestForm, AddItemForm, CancelUserRequest
+from project.forms import LoginForm, MetadataForm, RegistrationForm, AccessRequestForm, AddItemForm, CancelUserRequest, ContactForm
 from project.models import (
     Permission,
     Role,
@@ -331,3 +331,16 @@ def add_item():
         return redirect(url_for("add_item"))
 
     return render_template("item_add.html", collections=collections, form=form)
+
+@app.route("/about")
+def about():
+    return render_template("about.html")
+
+@app.route("/contact", methods=["GET", "POST"])
+def contact():
+    form = ContactForm()
+
+    if form.validate_on_submit():
+        flash("Thanks for your message, we'll be in touch soon.", "success")
+        return redirect(url_for("contact"))
+    return render_template("contact.html", form=form)

@@ -68,6 +68,13 @@ class AccessRequestForm(Form):
         # file_record = request.files.get("file_record")
         # collection_img = request.files.get("collection_img")
 
+class ContactForm(FlaskForm):
+    name = StringField("Full Name", [DataRequired(), Length(min=2, max=100)])
+    email = StringField("Email Address", [DataRequired(), Email()])
+    subject = StringField("Subject", [DataRequired(), Length(min=2, max=150)])
+    message = TextAreaField("Message", [DataRequired(), Length(min=10)])
+    submit = SubmitField("Send Message")
+    
 class AddItemForm(Form):
     collection_id = SelectField(
         "Parent Collection",
