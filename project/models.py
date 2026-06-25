@@ -471,8 +471,6 @@ def verify_user_password(email, password):
     return None
 
 
-# class User(UserMixin):
-#     def __init__(self, userID, role, preferred_title, name, email):
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -482,10 +480,9 @@ def load_user(user_id):
         return None
     
     permission = fetch_role_by_permission(user["roleID"])
-               #user["preferred_title"]
+
     return  User(user["userID"], user["roleID"], permission, user["preferred_title"], user["name"], user["email"])
-# lass User(UserMixin):
-#     def __init__(self, userID, permissions, preferred_title, name, email):
+
 
 def load_users(userID):
     users = rows(
@@ -574,7 +571,7 @@ def add_new_item(array):
                 "Under Assessment",
              ),
          )
-    # reviewer_id = get_reviewer_id_hack()
+
 
      assessment_record_insert = execute(
             """
