@@ -304,7 +304,7 @@ def dashboard():
         user_id = request.form.get("userID")
         role_id =  request.form.get("role")
         new_role = fetch_role_by_permission(role_id)
-        update_user_permissions(new_role["permissions"], user_id)
+        update_user_permissions(new_role["roleID"], user_id)
         flash("User role updated successfully.", "success")
         return redirect(url_for("dashboard"))
     

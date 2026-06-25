@@ -487,7 +487,7 @@ def load_user(user_id):
 # lass User(UserMixin):
 #     def __init__(self, userID, permissions, preferred_title, name, email):
 
-def load_users(userID = ''):
+def load_users(userID):
     users = rows(
         """
         SELECT 
@@ -499,6 +499,7 @@ def load_users(userID = ''):
         FROM Users u
         JOIN Roles r ON u.roleID = r.roleID
         WHERE userID != %s
+        ORDER BY u.name
         """,
         (userID,),
     )
@@ -508,11 +509,11 @@ def allowed_file(filename, allowed_extensions=ALLOWED_EXTENSIONS):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in allowed_extensions
 
-def update_user_permissions(user_id,role):
+def update_user_permissions(role,user_id):
     update_permission = execute(
         """
         UPDATE Users
-        SET permissions = %s
+        SET roleID = %s
         WHERE userID = %s
         """,
         (role, user_id),
