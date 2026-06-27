@@ -8,45 +8,6 @@ from flask_mysqldb import MySQL
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
-def load_env_to_dict(env_path):
-    env_values = {}
-
-    if not env_path.exists():
-        return env_values
-
-    with env_path.open("r", encoding="utf-8") as file:
-        for line in file:
-            line = line.strip()
-
-            if not line:
-                continue
-
-            if line.startswith("#"):
-                continue
-
-            if "=" not in line:
-                continue
-
-            key, value = line.split("=", 1)
-
-            key = key.strip()
-            value = value.strip()
-
-            if (
-                len(value) >= 2
-                and value[0] == value[-1]
-                and value.startswith(("'", '"'))
-            ):
-                value = value[1:-1]
-
-            env_values[key] = value
-
-    return env_values
-
-
-env = load_env_to_dict(BASE_DIR / ".env")
-
 upload_folder = BASE_DIR / "project" / "static" / "uploads"
 os.makedirs(upload_folder, exist_ok=True)
 
