@@ -8,6 +8,7 @@ from wtforms import form
 from pathlib import Path
 from uuid import uuid4
 from werkzeug.utils import secure_filename
+import MySQLdb
 from project import ALLOWED_EXTENSIONS, ALLOWED_IMG_EXTENSIONS, app
 from project.decorators import permission_required, is_administrator
 from project.forms import LoginForm, MetadataForm, RegistrationForm, AccessRequestForm, AddItemForm, CancelUserRequest, AssessmentForm, AccessRequestDecisionForm, ContactForm
@@ -71,6 +72,9 @@ def page_not_found(e):
 def internal_error(e):
     return render_template("500.html"), 500
 
+@app.errorhandler(MySQLdb.Error)
+def internal_error(e):
+    return render_template("500.html"), 500
 
 @app.route("/")
 def home():
@@ -193,8 +197,9 @@ def assessment_item(item_id):
 
     assessment_row = fetch_assessment(item_id) 
     assessments_comments = fetch_assessment_comments(assessment_row['assessment_id'])
+    language_groups = get_language_groups()
     return render_template("item_assessment.html", assessment=assessment_row, notes = assessments_comments,
-        form=form, item_id=item_id, final_decision=final_decision)
+        languages = language_groups, form=form, item_id=item_id, final_decision=final_decision)
 
 
 @app.route("/access_request/<access_request_id>", methods=["GET", "POST"])
@@ -402,13 +407,15 @@ def contact():
 @login_required
 @permission_required(Permission.ARCHIVIST)
 def update_item_details(item_id):
+    language_name = request.form.get("language_group")
+    language_group = get_language_group_id_by_name(language_name) 
     update_item(
         item_id,
         request.form.get("title"),
         request.form.get("description"),
         request.form.get("item_type"),
         request.form.get("place"),
-        request.form.get("language_group"),
+        language_group['languageGroupID'],
         request.form.get("item_format"),
         request.form.get("date_recorded"),
         )
