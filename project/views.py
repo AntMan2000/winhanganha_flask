@@ -1,14 +1,10 @@
-from calendar import c
 from datetime import date
 from tkinter import CURRENT
 from flask import abort, flash, redirect, render_template, request, session, url_for
-from flask_login import login_required, login_user, logout_user, current_user
-from flask_wtf import file
-from wtforms import form
-from pathlib import Path
 from uuid import uuid4
 from werkzeug.utils import secure_filename
 import MySQLdb
+from pathlib import Path
 from project import ALLOWED_EXTENSIONS, ALLOWED_IMG_EXTENSIONS, app
 from project.decorators import permission_required, is_administrator
 from project.forms import LoginForm, MetadataForm, RegistrationForm, AccessRequestForm, AddItemForm, CancelUserRequest, AssessmentForm, AccessRequestDecisionForm, ContactForm
@@ -56,7 +52,11 @@ from project.models import (
     update_item,
     delete_item,
     get_language_groups,
-    get_language_group_id_by_name
+    get_language_group_id_by_name,
+    login_required, 
+    login_user, 
+    logout_user, 
+    current_user
 )
 
 @app.errorhandler(403)
@@ -241,19 +241,7 @@ def login():
             permission = fetch_role_by_permission(user_row["roleID"])
             user = User(user_row["userID"], permission['roleID'], permission, user_row["preferred_title"], user_row["name"], user_row["email"])
             login_user(user)
-
-            session["userID"] = user_row["userID"]
-            session["role"] = permission["permissions"]
-            session["preferred_title"] = user_row["preferred_title"]
-            session["name"] = user_row["name"]
-            session["email"] = user_row["email"]
-
-            # reviewer_info = get_user_reviewer(user_row["userID"])
-            # if reviewer_info:
-            #     session["authorisationStatus"] = reviewer_info["authorisationStatus"]
-            #     session["role"] = reviewer_info["role"]
-            #     session["reviewerID"] = reviewer_info["reviewerID"]
-
+           
             flash("Logged in successfully", "success")
             return redirect(url_for("account"))
 

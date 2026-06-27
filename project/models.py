@@ -1,8 +1,11 @@
-from flask_login import UserMixin, AnonymousUserMixin
+from functools import wraps
+from datetime import date
+from flask import session, redirect, url_for, flash, g
+from pathlib import Path
+from werkzeug.local import LocalProxy
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
-from project import ALLOWED_EXTENSIONS, ALLOWED_IMG_EXTENSIONS, login_manager, mysql
-from datetime import date
+from project import ALLOWED_EXTENSIONS, ALLOWED_IMG_EXTENSIONS, mysql
 
 class Permission:
         PUBLIC = 1
@@ -13,7 +16,7 @@ class Permission:
 
 #return User(user["userID"], permission["role"], permission["permissions"], user["preferred_title"], user["name"], user["email"])
 
-class User(UserMixin):
+class User:
     def __init__(self, userID, roleID, permissions, preferred_title, name, email):
         self.id = str(userID)
         self.userID = userID
@@ -24,18 +27,59 @@ class User(UserMixin):
         self.name = name
         self.email = email
 
+    @property
+    def is_authenticated(self):
+        return True
+
     def can(self, permission):
         return (self.permissions & permission) == permission
 
     def is_administrator(self):
         return self.can(Permission.ADMINISTRATOR)
 
-class AnonymousUser(AnonymousUserMixin):
+class AnonymousUser:
+    is_authenticated = False
+    id = None
+    userID = None
+    preferred_title = ""
+    name = ""
+    email = ""
+    role = {"name": "Public", "permissions": 1, "tasks": "Can view public items"}
+    permissions = 1
+
     def can(self, permission):
         return False
 
     def is_administrator(self):
         return False
+
+
+def _get_current_user():
+    return getattr(g, "current_user", AnonymousUser())
+
+
+current_user = LocalProxy(_get_current_user)
+
+
+def login_user(user):
+    session["user_id"] = user.userID
+    session["userID"] = user.userID
+
+
+def logout_user():
+    session.clear()
+
+
+def login_required(view):
+    @wraps(view)
+    def wrapped_view(*args, **kwargs):
+        if not current_user.is_authenticated:
+            flash("Please log in to access this page.", "warning")
+            return redirect(url_for("login"))
+
+        return view(*args, **kwargs)
+
+    return wrapped_view
       
 class Role:
     def __init__(self, name, permissions=Permission.PUBLIC):
@@ -144,17 +188,37 @@ class Role:
 # Reviewer: Can view and review items (permissions 1 + 2 + 8 = 11)
 # Administrator: Can manage all aspects of the system (permissions 1 + 2 + 4 + 8 + 16 = 31)
 
+BASE_DIR = Path(__file__).resolve().parent.parent
 
+def load_env_file(filename=".env"):
+    env_path = BASE_DIR / filename
 
+    if not env_path.exists():
+        return
 
+    with env_path.open("r", encoding="utf-8") as file:
+        for line in file:
+            line = line.strip()
 
+            if not line or line.startswith("#"):
+                continue
 
+            if "=" not in line:
+                continue
 
+            key, value = line.split("=", 1)
 
+            key = key.strip()
+            value = value.strip()
 
+            if (
+                len(value) >= 2
+                and value[0] == value[-1]
+                and value.startswith(("'", '"'))
+            ):
+                value = value[1:-1]
 
-
-
+            os.environ.setdefault(key, value)
 
 
 
@@ -473,8 +537,6 @@ def verify_user_password(email, password):
     return None
 
 
-
-@login_manager.user_loader
 def load_user(user_id):
     user = get_user_by_id(user_id)
  
