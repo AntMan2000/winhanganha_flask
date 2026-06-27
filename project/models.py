@@ -1,7 +1,6 @@
 from functools import wraps
 from datetime import date
 from flask import session, redirect, url_for, flash, g
-from pathlib import Path
 from werkzeug.local import LocalProxy
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
@@ -187,40 +186,6 @@ class Role:
 # Archivist: Can view and edit all items can not approve access requests or change access levels (permissions 1 + 2 + 4 = 7)
 # Reviewer: Can view and review items (permissions 1 + 2 + 8 = 11)
 # Administrator: Can manage all aspects of the system (permissions 1 + 2 + 4 + 8 + 16 = 31)
-
-BASE_DIR = Path(__file__).resolve().parent.parent
-
-def load_env_file(filename=".env"):
-    env_path = BASE_DIR / filename
-
-    if not env_path.exists():
-        return
-
-    with env_path.open("r", encoding="utf-8") as file:
-        for line in file:
-            line = line.strip()
-
-            if not line or line.startswith("#"):
-                continue
-
-            if "=" not in line:
-                continue
-
-            key, value = line.split("=", 1)
-
-            key = key.strip()
-            value = value.strip()
-
-            if (
-                len(value) >= 2
-                and value[0] == value[-1]
-                and value.startswith(("'", '"'))
-            ):
-                value = value[1:-1]
-
-            os.environ.setdefault(key, value)
-
-
 
 def fetch_role_by_name(role_name):
     result = row(
