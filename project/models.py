@@ -21,7 +21,7 @@ class User:
         self.userID = userID
         self.roleID = roleID
         self.role = permissions
-        self.permissions = permissions["permissions"]
+        self.permissions = permissions.get("permissions", Permission.PUBLIC)
         self.preferred_title = preferred_title or ""
         self.name = name
         self.email = email

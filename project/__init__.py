@@ -90,15 +90,38 @@ bootstrap = Bootstrap5(app)
 
 from project import models
 from project import views
+from project.models import (
+    User,
+    AnonymousUser,
+    get_user_by_id,
+    fetch_role_by_permission
+)
 
 @app.before_request
 def load_logged_in_user():
-    user_id = session.get("user_id")
+    user_id = session.get("userID")
 
     if user_id is None:
-        g.current_user = None
-    else:
-        g.current_user = models.load_user(user_id)
+        g.current_user = AnonymousUser()
+        return
+
+    user = get_user_by_id(user_id)
+
+    if user is None:
+        g.current_user = AnonymousUser()
+        session.clear()
+        return
+
+    permission = fetch_role_by_permission(user["roleID"])
+
+    g.current_user = User(
+        user["userID"],
+        user["roleID"],
+        permission,
+        user["preferred_title"],
+        user["name"],
+        user["email"]
+    )
 
 
 @app.context_processor
