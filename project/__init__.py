@@ -9,7 +9,7 @@ from flask_mysqldb import MySQL
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 #sets upload folder makes it if it does not exist
-upload_folder = BASE_DIR / "project" / "uploads"
+upload_folder = BASE_DIR / "project" / "static" / "uploads"
 os.makedirs(upload_folder, exist_ok=True)
 
 #allowed extensions for archive upload types
@@ -44,7 +44,7 @@ app.config["MYSQL_DB"] = "winhanganha_archive"
 app.config["FLASK_RUN_HOST"] = "127.0.0.1"
 app.config["FLASK_RUN_PORT"] = 1337 #5000 is default for flask app (http://localhost:5000)
 ## must be false on submission
-app.config["FLASK_DEBUG"] = False 
+app.config["FLASK_DEBUG"] = True 
 
 ## end of parameter updates
 ###############################################################################################################

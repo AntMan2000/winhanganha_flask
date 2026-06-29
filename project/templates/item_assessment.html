@@ -80,11 +80,11 @@
           <span class="assessment-label">Item classification decision:</span><br>
           <span class="badge text-bg-info">{{ assessment.status }}</span>
         </p>
-        <p>
+ <!--       <p>
           <span class="assessment-label">Current metadata approval:</span><br>
           <span class="badge text-bg-dark">{{ assessment.community_approval }}</span>
         </p>
-        <p>
+ !-->       <p>
           <span class="assessment-label">Current metadata access:</span><br>
           <span class="badge text-bg-dark">{{ assessment.access_level }}</span>
         </p>
@@ -112,8 +112,7 @@
 <!-- ========== ACCORDION SECTION ========== -->
 <div class="accordion container padb col-lg-8" id="accordionExample">
   <div class="accordion-item">
-    {% set is_approved = assessment.community_approval and assessment.community_approval not in (None, 'None', '') and 
-    assessment.community_approval in ('Approved for public release', 'Approved with restrictions', 'Not approved for public release') %}
+    {% set is_approved = assessment.access_level not in (None, 'None', '') and assessment.cultural_sensitivity not in (None, 'None', '' , 'Not yet assessed') %}
     
     <!-- Item Details Accordion -->
      <div class="accordion-item">
@@ -191,15 +190,7 @@
               </select>
             </div>
 
-            <div class="col-md-4">
-              <label for="approvalStatus" class="form-label">Approval status</label>
-              <select class="form-select" id="approvalStatus" name="community_approval">
-                {% for option in ['', 'Awaiting review', 'Approved for public release', 'Approved with restrictions', 'Not approved for public release'] %}
-                <option value="{{ option }}" {% if option==assessment.community_approval %}selected{% endif %}>
-                  {{ option }}
-                </option>
-                {% endfor %}
-              </select>
+            <div class="col-md-4">             
             </div>
           </div>
 
@@ -226,10 +217,10 @@
     <!-- Item Classification Decision Accordion -->
   <div class="accordion-item">
     <h2 class="accordion-header">
-      <button class="accordion-button {% if not is_approved %}collapsed{% endif %}" type="button"
+      <button class="accordion-button" type="button"
         data-bs-toggle="collapse" data-bs-target="#collapseTwo"
         aria-expanded="{% if is_approved %}true{% else %}false{% endif %}" {% if not is_approved %}disabled{% endif %}>
-        Item Classification Decision {% if not is_approved %} | <b>&nbsp;Note: cultural metadata access to be completed first. </b> {% endif %}
+        Item Classification and Release Decision {% if not is_approved %} | <b>&nbsp;Note: cultural metadata access to be completed first. </b> {% endif %}
       </button>
     </h2>
     
@@ -240,11 +231,38 @@
 
           <form method="post" action="{{ url_for('assessment_item', item_id=assessment.item_id) }}">
             <div class="mb-3">
-              {{ render_field(form.final_decision) }}
+              <label for="final_decision" class="form-label">
+                Final Release Decision Required
+              </label>
+
+              <select class="form-select" id="final_decision" name="final_decision">
+                {% for option in ['', 'Decision pending', 'Release publicly', 'Keep private', 'Release with restricted access', 'Library consultation', 'Return for further consultation'] %}
+                  <option 
+                    value="{{ option }}" 
+                    {% if option == final_decision.get('approval', '') %}selected{% endif %}
+                  >
+                    {% if option %}
+                      {{ option }}
+                    {% else %}
+                      Select a decision
+                    {% endif %}
+                  </option>
+                {% endfor %}
+              </select>
             </div>
 
             <div class="mb-3">
-              {{ render_field(form.decision_reason) }}
+              <label for="decision_reason" class="form-label">
+                Decision Reason
+              </label>
+
+              <input 
+                type="text" 
+                id="decision_reason"
+                name="decision_reason"
+                class="form-control"
+                value="{{ final_decision.get('notes', '') }}"
+              >
             </div>
             
             <button type="submit" class="btn btn-success mybutton {% if not is_approved %}disabled{% endif %}">

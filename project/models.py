@@ -348,12 +348,14 @@ def fetch_assessment(item_id: str):
                cm.culturalSensitivity AS cultural_sensitivity,
                cm.culturalNotes AS cultural_notes,
                cm.accessConditions AS access_conditions,
-               cm.communityApprovalStatus AS community_approval
+               cm.communityApprovalStatus AS community_approval,
+               a.notes AS approval_notes,
+               a.assessmentOutcome AS final_approval
         FROM assessmentrecord a
         JOIN CollectionItem ci on ci.itemID = a.itemID
         JOIN Collection c ON c.collectionID = ci.collectionID
         JOIN CulturalMetadata cm ON cm.itemID = ci.itemID
-        JOIN languagegroup lg on ci.languagegroupid = lg.languagegroupid
+        LEFT JOIN languagegroup lg on ci.languagegroupid = lg.languagegroupid
         WHERE ci.itemID = %s
         """,
         (item_id,),
@@ -852,6 +854,7 @@ def get_featured_items():
         JOIN CulturalMetadata cm ON cm.itemID = ci.itemID
         WHERE cm.accessLevel = 'Public'
           AND cm.communityApprovalStatus = 'Approved for public release'
+          AND ci.status != 'Under Assessment'
         ORDER BY ci.itemID
         LIMIT 3
         """
@@ -907,8 +910,8 @@ def fetch_filtered_items(filters):
                cm.culturalSensitivity AS cultural_sensitivity
         FROM CollectionItem ci
         JOIN Collection c ON c.collectionID = ci.collectionID
-        JOIN CulturalMetadata cm ON cm.itemID = ci.itemID
-        join languagegroup lg on ci.languagegroupid = lg.languagegroupid
+        LEFT JOIN CulturalMetadata cm ON cm.itemID = ci.itemID
+        LEFT JOIN languagegroup lg on ci.languagegroupid = lg.languagegroupid
         WHERE ci.status != 'Under Assessment'
     """
 
@@ -1001,17 +1004,23 @@ def get_reviewer_id_hack():
     )
 
 # NOTE executed within a combined commit
-def execute_assessment_updates(item_id, user_id, final_decision):
+def execute_assessment_updates(item_id, user_id, final_decision, final_reason):
     cur = mysql.connection.cursor()
     try:
         mapped_status = get_mapped_status(final_decision)
         if mapped_status is None:
             raise ValueError(f"Mapping failed! '{final_decision}' is not a valid LHS status option.")
-        assessment_query = "update assessmentrecord set assessmentoutcome = %s, userID = %s where itemid = %s" 
-        cur.execute(assessment_query, (final_decision, user_id, item_id))
+        assessment_query = "update assessmentrecord set assessmentoutcome = %s, userID = %s, notes = %s where itemid = %s" 
+        cur.execute(assessment_query, (final_decision, user_id, final_reason, item_id))
         item_query = "update collectionitem set status = %s WHERE itemid = %s" 
         cur.execute(item_query, (mapped_status, item_id))        
         mysql.connection.commit()
+        item_query2 = "update culturalmetadata set communityApprovalStatus = %s, accessLevel = %s WHERE itemid = %s" 
+        cur.execute(item_query2, (mapped_status,mapped_status, item_id))        
+        mysql.connection.commit()    
+                  
+        
+            
         return cur.rowcount
     except:
         mysql.connection.rollback()
@@ -1022,14 +1031,16 @@ def execute_assessment_updates(item_id, user_id, final_decision):
 def get_mapped_status(status_string):
 
     status_mapping = {
-        'Decision pending': 'Continue review',
-        'Release publicly': 'Public release approved',
-        'Keep private': 'Keep private',
-        'Release with restricted access': 'Restricted access'
+        'Decision pending': 'Under Assessment',
+        'Release publicly': 'Approved for public release',
+        'Keep private': 'Private',
+        'Release with restricted access': 'Restricted',
+        'Library consultation': 'Restricted',
+        'Return for further consultation' : 'Under Assessment'
     }
 
     return status_mapping.get(status_string, None)
-
+           
 #allow deny access request
 def execute_access_request(access_request_id, final_decision):
     execute(

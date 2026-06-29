@@ -65,9 +65,9 @@ def page_not_found(e):
 def internal_error(e):
     return render_template("500.html"), 500
 
-@app.errorhandler(MySQLdb.Error)
-def internal_error(e):
-    return render_template("500.html"), 500
+#@app.errorhandler(MySQLdb.Error)
+#def internal_error(e):
+#    return render_template("500.html"), 500
 
 #routes homepage
 @app.route("/")
@@ -176,6 +176,7 @@ def assessment_item(item_id):
     final_decision = None 
     if request.method == "POST":
         final_decision = request.form.get("final_decision")
+        final_reason = request.form.get("decision_reason")
         #print(f"POST received for Item ID: {item_id}, Decision Outcome: {final_decision}")
         if "submit_metadata" in request.form:
             metadata = get_item_metadata(item_id)
@@ -189,7 +190,7 @@ def assessment_item(item_id):
                 flash("You do not have permission to submit a final decision.", "danger")
                 return redirect(url_for("assessment_item", item_id=item_id))
             user_id = current_user.userID   
-            execute_assessment_updates(item_id, user_id, final_decision)
+            execute_assessment_updates(item_id, user_id, final_decision, final_reason)
             flash("Assessment completed successfully", "success")
             return redirect(url_for("assessments"))   
         elif "submit_notes" in request.form:  
@@ -204,6 +205,9 @@ def assessment_item(item_id):
             flash("No decision was selected.", "danger")
 
     assessment_row = fetch_assessment(item_id) 
+    final_decision = {}
+    final_decision["approval"] = assessment_row.get("final_approval")
+    final_decision["notes"] = assessment_row.get("approval_notes")
     assessments_comments = fetch_assessment_comments(assessment_row['assessment_id'])
     language_groups = get_language_groups()
     return render_template("item_assessment.html", assessment=assessment_row, notes = assessments_comments,

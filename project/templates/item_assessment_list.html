@@ -7,7 +7,6 @@
 {% block content %}
 
 <div class="container">
-<div class="container">
   <nav aria-label="breadcrumb">
     <ol class="breadcrumb bg-light p-3 rounded">
       <li class="breadcrumb-item">
@@ -45,7 +44,7 @@
                 <th>Place</th>
                 <th>Metadata Access</th>
                 <th>Sensitivity</th>
-                <th>Review Status</th>   
+                <th>Review Status</th>
                 <th>Action</th>
               </tr>
             </thead>
@@ -61,8 +60,6 @@
                         class="img-fluid rounded"
                         style="max-width: 75px; max-height: 75px; object-fit: cover;"
                       >
-                    {% else %}
-                      
                     {% endif %}
                   </td>
 
@@ -79,44 +76,34 @@
                   <td>{{ assessment.item_type }}</td>
                   <td>{{ assessment.language_group }}</td>
                   <td>{{ assessment.place }}</td>
+                  <td>{{ assessment.access_level }}</td>
 
                   <td>
-                    {{ assessment.access_level }}
-                  </td>
-                  <td>
                     {% if assessment.cultural_sensitivity %}
-                      <!-- <span class="badge bg-danger"> -->
-                        {{ assessment.cultural_sensitivity }}
-                      <!-- </span> -->
+                      {{ assessment.cultural_sensitivity }}
                     {% else %}
-                      <!-- <span class="badge bg-secondary"> -->
-                        Not set
-                      <!-- </span> -->
+                      Not set
                     {% endif %}
                   </td>
 
                   <td>
                     {% if assessment.review_status %}
-                      <!-- <span class="badge bg-warning text-dark"> -->
-                        <b> {{ assessment.review_status }} </b>
-                      <!-- </span> -->
+                      <b>{{ assessment.review_status }}</b>
                     {% else %}
-                      <!-- <span class="badge bg-secondary"> -->
-                        <b> Pending </b>
-                      <!-- </span> -->
+                      <b>Pending</b>
                     {% endif %}
                   </td>
-                              
 
                   <td>
                     {% if current_user.is_authenticated and current_user.can(Permission.ARCHIVIST) %}
-                   <a
-                      href="{{ url_for('assessment_item', item_id=assessment.item_id) }}"
-                      class="btn btn-sm btn-primary mybutton mb-1"
-                    >
-                      Review Item
-                    </a>
-                   {% endif %}
+                      <a
+                        href="{{ url_for('assessment_item', item_id=assessment.item_id) }}"
+                        class="btn btn-sm btn-primary mybutton mb-1"
+                      >
+                        Review Item
+                      </a>
+                    {% endif %}
+
                     <button
                       type="button"
                       class="btn btn-sm btn-outline-dark mybutton"
@@ -127,137 +114,139 @@
                     </button>
                   </td>
                 </tr>
-
-                <div
-                  class="modal fade"
-                  id="assessmentModal{{ assessment.assessment_id }}"
-                  tabindex="-1"
-                  aria-labelledby="assessmentModalLabel{{ assessment.assessment_id }}"
-                  aria-hidden="true"
-                >
-                  <div class="modal-dialog modal-lg modal-dialog-scrollable">
-                    <div class="modal-content">
-                      <div class="modal-header">
-                        <h5
-                          class="modal-title"
-                          id="assessmentModalLabel{{ assessment.assessment_id }}"
-                        >
-                          Assessment Summary: {{ assessment.title }}
-                        </h5>
-                        <button
-                          type="button"
-                          class="btn-close"
-                          data-bs-dismiss="modal"
-                          aria-label="Close"
-                        ></button>
-                      </div>
-
-                      <div class="modal-body">
-                        <div class="row g-4">
-                          <div class="col-md-5">
-                            {% if assessment.image_filename %}
-                              <img
-                                src="{{ url_for('static', filename=assessment.image_filename) }}"
-                                alt="{{ assessment.title }}"
-                                class="img-fluid rounded"
-                              >
-                            {% else %}
-                              
-                            {% endif %}
-                          </div>
-
-                          <div class="col-md-7">
-                            <ul class="metadata-list">
-                              <li><strong>Assessment ID:</strong> {{ assessment.assessment_id }}</li>
-                              <li><strong>Item ID:</strong> {{ assessment.item_id }}</li>
-                              <li><strong>Collection:</strong> {{ assessment.collection_name }}</li>
-                              <li><strong>Item type:</strong> {{ assessment.item_type }}</li>
-                              <li><strong>Language group:</strong> {{ assessment.language_group }}</li>
-                              <li><strong>Place:</strong> {{ assessment.place }}</li>
-                              <li><strong>Date recorded:</strong> {{ assessment.date_recorded }}</li>
-                              <li><strong>Status:</strong> {{ assessment.status }}</li>
-                              <li><strong>Current access:</strong> {{ access_badge(assessment.access_level) }}</li>
-                              <li><strong>Recommended access:</strong> {{ access_badge(assessment.recommended_access_level) }}</li>
-                              <li><strong>Cultural sensitivity:</strong> {{ assessment.cultural_sensitivity }}</li>
-                              <li><strong>Review status:</strong> {{ assessment.review_status }}</li>                             
-                            </ul>
-                          </div>
-                        </div>
-
-                        <hr>
-
-                        <h6>Description</h6>
-                        <p>{{ assessment.description }}</p>
-
-                        <h6>Cultural Notes</h6>
-                        <p>
-                          {% if assessment.cultural_notes %}
-                            {{ assessment.cultural_notes }}
-                          {% else %}
-                            No cultural notes recorded.
-                          {% endif %}
-                        </p>
-
-                        <h6>Access Conditions</h6>
-                        <p>
-                          {% if assessment.access_conditions %}
-                            {{ assessment.access_conditions }}
-                          {% else %}
-                            No access conditions recorded.
-                          {% endif %}
-                        </p>
-
-                        <h6>Pending Action</h6>
-                        <p>
-                          {% if assessment.pending_action %}
-                            {{ assessment.pending_action }}
-                          {% else %}
-                            No pending action recorded.
-                          {% endif %}
-                        </p>
-
-                        <h6>Final Decision</h6>
-                        <p>
-                          {% if assessment.final_decision %}
-                            {{ assessment.final_decision }}
-                          {% else %}
-                            Decision pending.
-                          {% endif %}
-                        </p>
-
-                        <h6>Decision Reason</h6>
-                        <p>
-                          {% if assessment.decision_reason %}
-                            {{ assessment.decision_reason }}
-                          {% else %}
-                            No decision reason recorded.
-                          {% endif %}
-                        </p>
-                      </div>
-
-                      <div class="modal-footer">
-                        <a
-                          href="{{ url_for('item_detail', item_id=assessment.item_id) }}"
-                          class="btn btn-dark mybutton"
-                        >
-                          Open Public Item View
-                        </a>
-                        <button
-                          type="button"
-                          class="btn btn-outline-dark mybutton"
-                          data-bs-dismiss="modal"
-                        >
-                          Close
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
               {% endfor %}
             </tbody>
           </table>
         </div>
+
+        {% for assessment in assessments %}
+          <div
+            class="modal fade"
+            id="assessmentModal{{ assessment.assessment_id }}"
+            tabindex="-1"
+            aria-labelledby="assessmentModalLabel{{ assessment.assessment_id }}"
+            aria-hidden="true"
+          >
+            <div class="modal-dialog modal-lg modal-dialog-scrollable">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5
+                    class="modal-title"
+                    id="assessmentModalLabel{{ assessment.assessment_id }}"
+                  >
+                    Assessment Summary: {{ assessment.title }}
+                  </h5>
+
+                  <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Close"
+                  ></button>
+                </div>
+
+                <div class="modal-body">
+                  <div class="row g-4">
+                    <div class="col-md-5">
+                      {% if assessment.image_filename %}
+                        <img
+                          src="{{ url_for('static', filename=assessment.image_filename) }}"
+                          alt="{{ assessment.title }}"
+                          class="img-fluid rounded"
+                        >
+                      {% endif %}
+                    </div>
+
+                    <div class="col-md-7">
+                      <ul class="metadata-list">
+                        <li><strong>Assessment ID:</strong> {{ assessment.assessment_id }}</li>
+                        <li><strong>Item ID:</strong> {{ assessment.item_id }}</li>
+                        <li><strong>Collection:</strong> {{ assessment.collection_name }}</li>
+                        <li><strong>Item type:</strong> {{ assessment.item_type }}</li>
+                        <li><strong>Language group:</strong> {{ assessment.language_group }}</li>
+                        <li><strong>Place:</strong> {{ assessment.place }}</li>
+                        <li><strong>Date recorded:</strong> {{ assessment.date_recorded }}</li>
+                        <li><strong>Status:</strong> {{ assessment.status }}</li>
+                        <li><strong>Current access:</strong> {{ access_badge(assessment.access_level) }}</li>
+                        <li><strong>Recommended access:</strong> {{ access_badge(assessment.recommended_access_level) }}</li>
+                        <li><strong>Cultural sensitivity:</strong> {{ assessment.cultural_sensitivity }}</li>
+                        <li><strong>Review status:</strong> {{ assessment.review_status }}</li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <hr>
+
+                  <h6>Description</h6>
+                  <p>{{ assessment.description }}</p>
+
+                  <h6>Cultural Notes</h6>
+                  <p>
+                    {% if assessment.cultural_notes %}
+                      {{ assessment.cultural_notes }}
+                    {% else %}
+                      No cultural notes recorded.
+                    {% endif %}
+                  </p>
+
+                  <h6>Access Conditions</h6>
+                  <p>
+                    {% if assessment.access_conditions %}
+                      {{ assessment.access_conditions }}
+                    {% else %}
+                      No access conditions recorded.
+                    {% endif %}
+                  </p>
+
+                  <h6>Pending Action</h6>
+                  <p>
+                    {% if assessment.pending_action %}
+                      {{ assessment.pending_action }}
+                    {% else %}
+                      No pending action recorded.
+                    {% endif %}
+                  </p>
+
+                  <h6>Final Decision</h6>
+                  <p>
+                    {% if assessment.final_decision %}
+                      {{ assessment.final_decision }}
+                    {% else %}
+                      Decision pending.
+                    {% endif %}
+                  </p>
+
+                  <h6>Decision Reason</h6>
+                  <p>
+                    {% if assessment.decision_reason %}
+                      {{ assessment.decision_reason }}
+                    {% else %}
+                      No decision reason recorded.
+                    {% endif %}
+                  </p>
+                </div>
+
+                <div class="modal-footer">
+                  <a
+                    href="{{ url_for('item_detail', item_id=assessment.item_id) }}"
+                    class="btn btn-dark mybutton"
+                  >
+                    Open Public Item View
+                  </a>
+
+                  <button
+                    type="button"
+                    class="btn btn-outline-dark mybutton"
+                    data-bs-dismiss="modal"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+
       {% else %}
         <div class="alert alert-secondary" role="alert">
           There are currently no items under assessment.
@@ -265,20 +254,22 @@
       {% endif %}
     </div>
   </div>
+</div>
 
 <hr class="my-5">
 
+<div class="container padb">
+  <div class="row">
     <div class="col-12">
-      
-      <h2>
-        Access Requests Pending</h2>
+      <h2>Access Requests Pending</h2>
       <p>
         Current access requests pending for the review.
       </p>
+
       {% if access_requests %}
         <div class="table-responsive">
           <table class="table table-striped table-hover align-middle assessment-table-small">
-            <thead class="table-dark"> 
+            <thead class="table-dark">
               <tr>
                 <th>Image</th>
                 <th>Item</th>
@@ -286,13 +277,11 @@
                 <th>Type</th>
                 <th>Item Access Level</th>
                 <th>Sensitivity</th>
-                <!-- <th>Language Group</th> -->
                 <th>Requestor</th>
-                <th>Status</th>   
-                <th>Action</th> 
+                <th>Status</th>
+                <th>Action</th>
               </tr>
-            </thead> 
-
+            </thead>
 
             <tbody>
               {% for access_request in access_requests %}
@@ -305,10 +294,7 @@
                         class="img-fluid rounded"
                         style="max-width: 75px; max-height: 75px; object-fit: cover;"
                       >
-                    {% else %}
-                      
                     {% endif %}
-
                   </td>
 
                   <td>
@@ -323,11 +309,9 @@
                   <td class="fw-bold">{{ access_request.requestor_name }}</td>
                   <td>{{ access_request.request_status }}</td>
 
-  
-
                   <td>
-                      {% if current_user.is_authenticated and current_user.can(Permission.REVIEWER) %}
-                    <a
+                    {% if current_user.is_authenticated and current_user.can(Permission.REVIEWER) %}
+                      <a
                         href="{{ url_for('access_request', access_request_id=access_request.access_request_id) }}"
                         class="btn btn-sm btn-primary mybutton mb-1"
                       >
@@ -336,17 +320,19 @@
                     {% endif %}
                   </td>
                 </tr>
+              {% endfor %}
             </tbody>
-            {% endfor %}
           </table>
-      </div>
+        </div>
       {% else %}
         <div class="alert alert-secondary" role="alert">
-          There are currently no items under assessment.
+          There are currently no access requests pending.
         </div>
       {% endif %}
-
+    </div>
+  </div>
 </div>
+
 <hr class="my-5">
 
 <div class="container padb">
