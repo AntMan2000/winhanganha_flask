@@ -9,6 +9,7 @@
   {{ bootstrap.load_css() }}
 
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/lizard_grey.svg') }}">
 </head>
 
 <body id="top">
@@ -29,7 +30,9 @@
 <!-- ========== MAIN NAV BAR ========== -->
 <nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top" style="top:52px;">
   <div class="container">
-
+    <div class="text-center">
+      <img src="{{ url_for('static', filename='img/lizard_grey.svg') }}" class="rounded" style="border:0px; max-width: 35px;" >&nbsp;&nbsp;
+    </div>
      <!-- Brand / Logo -->
      <a class="navbar-brand"
        href="{{ url_for('home') }}"
@@ -140,11 +143,11 @@
 <footer class="site-footer">
 
   <div class="footer-acknowledgement padb">
-    First Nations Winhanganha Archive acknowledges the Traditional Owners of Country throughout Australia and acknowledges their continuing connection to land, waters and community. We pay our respects to the people, the cultures and the Elders past and present.
+    First Nations Winhanganha Archive acknowledges the Traditional Owners of Country throughout Australia and acknowledges their continuing connection to land, waters and community. <br>We pay our respects to the people, the cultures and the Elders past and present.
   </div>
 
   <div class="footer-protocols padb">
-    Materials in this archive remain connected to the communities, families and knowledge holders from which they come. Users must follow cultural use conditions and must not reproduce, download or share restricted materials without permission.
+    Materials in this archive remain connected to the communities, families and knowledge holders from which they come. <br>Users must follow cultural use conditions and must not reproduce, download or share restricted materials without permission.
   </div>
 
   <div class="footer-bottom py-3">
