@@ -122,7 +122,7 @@
       <div id="collapseItemDetails" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
         <div class="accordion-body">
           <p class="text-muted">Review and update the core item details. These fields were set when the item was uploaded and can be corrected here if needed.</p>
-          <form method="post" action="/item/{{ assessment.item_id }}/update">
+          <form method="post" action="/item/{{ assessment.item_id }}/update" autocomplete="off">
             <div class="mb-3">
               <label class="form-label">Title</label>
               <input type="text" class="form-control" name="title" value="{{ assessment.title }}">
@@ -141,6 +141,7 @@
             </div>
             <div class="mb-3">            
         <select name="language_group" id="language_group" class="form-control" required>
+          <label class="form-label">Language Group</label>
           <option value="">Select Language</option>
         {% for language in languages %}
           <option value="{{language["languageName"]}}" {% if assessment.language_group == language["languageName"] %}selected{% endif %}>{{language["languageName"]}}</option>language_group
